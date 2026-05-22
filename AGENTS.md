@@ -1,109 +1,84 @@
 # AGENTS — CloneScout
 
 > Instructions for AI coding assistants working on this project.
-> Read this file first, then consult the relevant blueprint before touching any module.
+> Read the full product spec at `PROJECT.md` before touching any module.
 
----
-
-## 1. Mission
+## Mission
 
 CloneScout is a portable Python CLI tool that finds duplicate and near-duplicate
 directories using only filesystem metadata — no file content reading. It scans
 locally, stores metadata in portable archives, merges results from multiple
 machines, and produces a tiered duplicate report.
 
-Full product specification: `PROJECT.md`.
-
----
-
-## 2. Tech Stack & Constraints
+## Tech Stack & Constraints
 
 - **Python 3.11 exactly.** Zero external dependencies — standard library only.
 - Permitted 3.11-specific: `tomllib`, `typing.Self / LiteralString / Never`, exception groups.
 - **Forbidden (3.12+):** `itertools.batched`, PEP 695 type syntax, `pathlib.Path.walk` → use `os.walk`.
 
----
+## Commands
 
-## 3. Project Structure
+```bash
+python3 -m ruff check src/       # lint (line-length 100, py311)
+python3 -m mypy src/             # type check (strict mode)
+python3 -m pytest tests/ -v      # test
+python3 scripts/build_zipapp.py  # build → dist/clonescout-YYYY.MM.pyz
+```
 
-    clonescout/
-    ├── PROJECT.md
-    ├── AGENTS.md
-    ├── README.md
-    ├── LICENSE
-    │
-    ├── docs/
-    │   ├── blueprints/
-    │   │   ├── cli.md               # CLI commands, flags, verbosity, config file
-    │   │   ├── archive-handling.md  # Archive scanning rules and constraints
-    │   │   └── analysis.md          # Metadata model, storage format, LSH/MinHash tiers
-    │   ├── user-guide.md            # Usage instructions and tips
-    │   ├── developer-guide.md       # Testing, git, versioning, build, dev workflow
-    │   └── changelog.md
-    │
-    ├── snippets/                    # Code fragments before integration into src/
-    │
-    ├── src/
-    │   └── clonescout/
-    │       ├── __init__.py
-    │       ├── __main__.py          # Entry point
-    │       ├── cli.py               # argparse: scan | merge | report | sample
-    │       ├── scanner.py           # Recursive metadata collection (file system)
-    │       ├── archive.py           # .zip/.tar/.tar.gz reading without extraction
-    │       ├── storage.py           # Vocabulary + JSON + compressed pickle
-    │       ├── merge.py             # Cross-machine vocabulary merging
-    │       ├── analysis.py          # LSH + MinHash, tiered matching (T1→T2→T3)
-    │       ├── report.py            # Prioritized Markdown report
-    │       ├── config.py            # TOML config loading, defaults
-    │       ├── models.py            # Dataclasses: FileRecord, FolderRecord, MatchCandidate
-    │       └── constants.py         # Tier names, config keys, magic strings
-    │
-    ├── tests/
-    │   ├── conftest.py
-    │   ├── unit/
-    │   └── integration/
-    │
-    ├── scripts/
-    │   └── build_zipapp.py
-    │
-    ├── dist/
-    ├── sandbox/                     # Experiments — fully gitignored
-    ├── .github/workflows/ci.yml
-    ├── .gitignore
-    ├── .python-version              # 3.11
-    └── pyproject.toml
+Run in order: `lint` → `typecheck` → `test`.
 
----
+## Project Structure (planned — source modules do not yet exist)
 
-## 4. Coding Conventions
+```
+├── src/clonescout/
+│   ├── cli.py            # argparse: scan | merge | report | sample
+│   ├── scanner.py        # Recursive metadata collection (file system)
+│   ├── archive.py        # .zip/.tar/.tar.gz reading without extraction
+│   ├── storage.py        # Vocabulary + JSON + compressed pickle
+│   ├── merge.py          # Cross-machine vocabulary merging
+│   ├── analysis.py       # LSH + MinHash, tiered matching (T1→T2→T3)
+│   ├── report.py         # Prioritized Markdown report
+│   ├── config.py         # TOML config loading, defaults
+│   ├── models.py         # Dataclasses: FileRecord, FolderRecord, MatchCandidate
+│   └── constants.py      # Tier names, config keys, magic strings
+├── tests/
+│   ├── units/
+│   └── integration/
+├── snippets/             # Code fragments staged here before moving into src/
+├── scripts/              # build_zipapp.py (not yet created)
+├── docs/
+│   └── developer-guide.md
+├── dist/                 # Build output (gitignored)
+├── sandbox/              # Experiments — fully gitignored
+└── PROJECT.md            # Full product specification
+```
 
-### Abstractions
+Core flow: `cli → scanner → storage` (local), then `merge` (cross-machine), then `analysis → report`.
+Archive scanning: `archive` module stands in for `scanner` when source is a zip/tar/tar.gz.
 
-Prefer incremental integration over speculative abstractions.
-Abstract only after repeated patterns emerge.
-
-Avoid introducing layers, base classes, factories,
-or dependency injection unless explicitly requested.
+## Coding Conventions
 
 ### Type Hints
 Every function and method must be fully type-hinted. Use Python 3.11 features:
 `|` unions, `list[X]`, `dict[K,V]`, `tuple[X,Y]`, `Self`, `Optional[X]`, `Callable`.
 
 ### Docstrings
-Google style for all public functions, classes, and methods. 
-Treat these sections - Args, Returns or Yields", Raises - as highly desirable.
+Google style for all public functions, classes, and methods.
+Sections: Args, Returns/Yields, Raises are highly desirable.
 
 ### Naming
-- Modules: `snake_case` | Classes: `PascalCase` | Functions & methods: `snake_case`
+- Modules: `snake_case` | Classes: `PascalCase` | Functions/methods: `snake_case`
 - Constants: `UPPER_SNAKE_CASE` (in `constants.py`) | Private internals: `_single_underscore`
 
 ### Formatting
 PEP 8. Line length 100. Import order: stdlib first, then project modules, each block
 alphabetically sorted.
 
----
+### Abstractions
+Prefer incremental integration over speculative abstractions. Abstract only after
+repeated patterns emerge. Avoid base classes, factories, or DI unless explicitly requested.
 
-## 5. Error Handling
+## Error Handling
 
 **Scanning must be resilient** — a single unreadable file must never abort the scan.
 Collect everything possible, warn about the rest via `logging.warning()` to stderr.
@@ -116,15 +91,24 @@ Collect everything possible, warn about the rest via `logging.warning()` to stde
 | Symlink encountered | Ignore via `os.walk(followlinks=False)` |
 | Socket, FIFO, device file | Ignore — only regular files are processed |
 
----
+## Testing
 
-## 6. Module → Blueprint Map
+- Framework: `pytest` (dev dependency).
+- Integration tests build `.zip`/`.tar.gz` archives on the fly via `tmp_path` — no binary fixtures.
+- Every module's public API should have at least a smoke test.
+  See `docs/developer-guide.md` for full testing, build, and git workflow details.
 
-Before writing or modifying a module, read the corresponding blueprint:
+## Git Conventions
 
-| Module(s) | Blueprint |
-|---|---|
-| `cli.py`, `__main__.py`, `config.py` | `docs/blueprints/cli.md` |
-| `archive.py` | `docs/blueprints/archive-handling.md` |
-| `analysis.py`, `storage.py`, `merge.py`, `models.py` | `docs/blueprints/analysis.md` |
-| Testing, git, build | `docs/developer-guide.md` |
+Lightweight conventional commits:
+`feat:` | `fix:` | `docs:` | `refactor:` | `test:` | `chore:`
+
+Versioning: CalVer (`2026.05`, `2026.06`, etc.)
+
+## Key Design Decisions (from PROJECT.md)
+
+- Metadata model: (node, anchor, folder_parent, folder_name, stem, suffix) uniquely identifies a file.
+- Features: (ext, size, mtime).
+- Storage: nested dicts → vocabulary-indexed → JSON in compressed pickle.
+- T1 = "folder_name + stem + ext + size", T2 = "stem + ext + size + mtime", T3 = "stem + ext + size".
+- A folder matched at a tier is excluded from lower tiers.
