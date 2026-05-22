@@ -100,7 +100,7 @@ Gathered file features include:
 Metadata are stored as nested dictionaries with node names on level 1 of the hierahchy, anchors on level 2, etc. with (ext, size, mtime) tuples as leaves of the tree. 
 For compactness, each literal on the hierarchy is replaced with corresponding vocabulary index.
 
-Vocabulary and metadata are serialized as a list and JSON, respectively, in a compressed pickle file.
+Vocabulary and metadata are serialized as a list and JSON, respectively, in a compressed ZIP file.
 
 On merge, common vocabulary is built first, then all metadata dictionaries are recoded and re-serialized.
 
