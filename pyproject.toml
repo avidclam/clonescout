@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clonescout"
+version = "2026.05"
+description = "Find duplicate and near-duplicate directories using only filesystem metadata"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+clonescout = "clonescout.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/avidclam/clonescout"
+Issues = "https://github.com/avidclam/clonescout/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "mypy>=1.8",
+    "ruff>=0.4",
+]
+
+# ---------------------------------------------------------------------------
+# Hatchling: source layout
+# ---------------------------------------------------------------------------
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clonescout"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "SIM", "TCH"]
+
+# ---------------------------------------------------------------------------
+# Mypy — strict type checking
+# ---------------------------------------------------------------------------
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/clonescout"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+
+[tool.uv]
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
