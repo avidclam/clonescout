@@ -47,6 +47,8 @@ Run in order: `lint` → `typecheck` → `test`.
 ├── snippets/             # Code fragments staged here before moving into src/
 ├── scripts/              # build_zipapp.py (not yet created)
 ├── docs/
+│   ├── blueprints/
+│   │   └── cli_config.md # Specification for `cli.py`, `__main__.py`, and `config.py`
 │   └── developer-guide.md
 ├── dist/                 # Build output (gitignored)
 ├── sandbox/              # Experiments — fully gitignored

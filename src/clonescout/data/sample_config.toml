@@ -1,0 +1,89 @@
+# Sample CloneScout configuration file.
+# CLI flags, if given, override the corresponding configuration options.
+
+# CLI flag: --config PATH / -c PATH
+# Default: clonescout.toml, searched in the current working directory.
+
+# CLI flag: --force / -f
+# If true, silently overwrite output files. Otherwise, exit with an error if a file exists.
+force = true
+
+# CLI flags: -v, -vv, -q
+# Logging verbosity. Default is WARNING. Other levels: INFO (-v), DEBUG (-vv), ERROR (-q).
+verbosity = "WARNING"
+
+
+[scan]
+# CLI flag: --node NODE / -n NODE
+# A user-assigned name for this machine. Default: machine hostname.
+node = "home"
+
+# CLI flag: --root PATH / -r PATH  (repeatable, no default)
+# Top-level directory or archive (ZIP or TAR) to scan. Accepts multiple values.
+# When --root is given on the command line, this config list is ignored entirely.
+root = [
+    "/data/projects",
+    "/data/archive.zip",
+]
+
+# CLI flag: --skip NAME / -s NAME  (repeatable, optional)
+# Exact directory name to skip. Matching directories are not entered,
+# and their entire subtree is excluded from the scan.
+skip = [
+    # macOS system folders
+    ".DS_Store",
+    ".Spotlight-V100",
+    ".Trashes",
+    ".fseventsd",
+
+    # Windows system folders
+    "System Volume Information",
+    "$RECYCLE.BIN",
+    "Thumbs.db",
+
+    # Photo software caches
+    "Lightroom Catalog Previews.lrdata",
+    "Lightroom CC Catalog Previews.lrdata",
+    "iPod Photo Cache",
+]
+
+# CLI flag: --exclude PATTERN / -e PATTERN  (repeatable, optional)
+# Regex patterns matched against the reconstructed path of each scanned folder.
+# Paths always use forward slash as a separator, even on Windows.
+# Folders whose path matches any pattern are excluded from the output.
+exclude = [
+    # Trash and temporary folders anywhere in the tree
+    "(?i)/\\.(trash|trashes)/",
+    "(?i)/\\.tmp/",
+
+    # Folders that look like incomplete downloads
+    "(?i)/(incomplete|partial|downloading)/",
+]
+
+# CLI flag: --output PATH / -o PATH  (no default)
+# Path to the output ZIP file containing collected metadata.
+output = "home.zip"
+
+
+[merge]
+# CLI flag: --input PATH / -i PATH  (repeatable, no default)
+# Metadata ZIP files to merge, produced by previous scan runs.
+input = [
+    "home.zip",
+    "work.zip",
+    "nas.zip",
+]
+
+# CLI flag: --output PATH / -o PATH  (no default)
+# Path to the merged metadata ZIP file.
+output = "merged.zip"
+
+
+[report]
+# CLI flag: --input PATH / -i PATH
+# Path to the merged metadata ZIP file. Default: the value of merge.output.
+input = "merged.zip"
+
+# CLI flag: --output PATH / -o PATH  (optional)
+# Path for the Markdown report. If not set, the report is printed to stdout.
+output = "report.md"
