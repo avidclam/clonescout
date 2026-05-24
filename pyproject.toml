@@ -56,9 +56,6 @@ files = ["src/clonescout"]
 # Pytest
 # ---------------------------------------------------------------------------
 
-[tool.uv]
-venv = ".venv"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"
