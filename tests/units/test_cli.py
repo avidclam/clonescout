@@ -156,6 +156,26 @@ class TestBuildParser:
         assert args.sample_command == "report"
 
 
+class TestSuggestingParser:
+    def test_suggests_for_long_form_unknown_arg(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        parser = build_parser()
+        with pytest.raises(SystemExit) as exc:
+            parser.parse_args(["scan", "--rrot"])
+        assert exc.value.code == 2
+        captured = capsys.readouterr()
+        assert "unrecognized arguments" in captured.err
+        assert "did you mean" in captured.err
+
+    def test_no_suggest_for_short_form_unknown_arg(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        parser = build_parser()
+        with pytest.raises(SystemExit) as exc:
+            parser.parse_args(["scan", "-x"])
+        assert exc.value.code == 2
+        captured = capsys.readouterr()
+        assert "unrecognized arguments" in captured.err
+        assert "did you mean" not in captured.err
+
+
 class TestSetupLogging:
     def test_setup_logging_debug(self) -> None:
         import logging

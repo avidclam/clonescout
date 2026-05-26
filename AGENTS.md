@@ -18,14 +18,17 @@ machines, and produces a tiered duplicate report.
 
 ## Commands
 
+All tooling runs from `.venv/` (Python 3.11 + dev deps):
+
 ```bash
-python3 -m ruff check src/       # lint (line-length 100, py311)
-python3 -m mypy src/             # type check (strict mode)
-python3 -m pytest tests/ -v      # test
-python3 scripts/build_zipapp.py  # build → dist/clonescout-YYYY.MM.pyz
+.venv/bin/python -m ruff check src/ tests/  # lint (line-length 100, py311)
+.venv/bin/python -m mypy src/               # type check (strict mode)
+.venv/bin/python -m pytest tests/ -v        # test
+.venv/bin/python scripts/build_zipapp.py    # build → dist/clonescout-YYYY.MM.pyz
 ```
 
 Run in order: `lint` → `typecheck` → `test`.
+Never install anything — the venv already exists and has all dependencies.
 
 ## Project Structure (planned — source modules do not yet exist)
 

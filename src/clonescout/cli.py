@@ -16,7 +16,7 @@ from clonescout.config import (
     MergeConfig,
     ReportConfig,
     ScanConfig,
-    _levenshtein,
+    _suggest,
     load_config,
 )
 from clonescout.constants import EXIT_BAD_ARGS
@@ -46,12 +46,10 @@ class _SuggestingParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:  # type: ignore[override]
         if message.startswith("unrecognized arguments:"):
             bad = message[len("unrecognized arguments:"):].strip().split()[0]
-            known = _collect_option_strings(self)
-            if known:
-                closest = min(known, key=lambda k: _levenshtein(bad, k))
-                dist = _levenshtein(bad, closest)
-                if dist <= 3:
-                    message = f"unrecognized arguments: {bad} — did you mean '{closest}'?"
+            known = frozenset(_collect_option_strings(self))
+            hint = _suggest(bad, known)
+            if hint:
+                message = f"unrecognized arguments: {bad}{hint}"
         super().error(message)
 
 
