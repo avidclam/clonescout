@@ -251,6 +251,45 @@ class TestLoadConfig:
             load_config(path, "scan")
         assert exc.value.code == EXIT_BAD_ARGS
 
+    def test_unknown_section_with_typo(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        path = self._write_toml(
+            "[scna]\nroot = ['/tmp']\noutput = 'out.zip'\n"
+        )
+        with pytest.raises(SystemExit) as exc:
+            load_config(path, "scan")
+        assert exc.value.code == EXIT_BAD_ARGS
+        captured = capsys.readouterr()
+        assert "unknown config section '[scna]'" in captured.err
+        assert "did you mean '[scan]'?" in captured.err
+
+    def test_unknown_section_no_suggestion(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        path = self._write_toml(
+            "[bogus]\nkey = 'value'\n"
+        )
+        with pytest.raises(SystemExit) as exc:
+            load_config(path, "scan")
+        assert exc.value.code == EXIT_BAD_ARGS
+        captured = capsys.readouterr()
+        assert "unknown config section '[bogus]'" in captured.err
+        assert "did you mean" not in captured.err
+
+    def test_known_sections_accepted(self) -> None:
+        path = self._write_toml(
+            "[scan]\nroot = ['/tmp']\noutput = 'out.zip'\n"
+            "[merge]\ninput = ['a.zip']\n"
+            "[report]\ninput = 'm.zip'\n"
+        )
+        cfg = load_config(path, "scan")
+        assert isinstance(cfg, ScanConfig)
+
+    def test_known_section_irrelevant_to_command_accepted(self) -> None:
+        path = self._write_toml(
+            "[scan]\nroot = ['/tmp']\noutput = 'out.zip'\n"
+            "[merge]\ninput = ['a.zip', 'b.zip']\noutput = 'm.zip'\n"
+        )
+        cfg = load_config(path, "scan")
+        assert isinstance(cfg, ScanConfig)
+
     def test_no_command_returns_base_config(self) -> None:
         path = self._write_toml("force = true\n")
         cfg = load_config(path, "")

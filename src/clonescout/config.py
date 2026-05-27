@@ -25,6 +25,8 @@ _SECTION_KEYS: dict[str, frozenset[str]] = {
     "report": _REPORT_KEYS,
 }
 
+_KNOWN_SECTIONS = frozenset(_SECTION_KEYS.keys())
+
 
 class ConfigError(Exception):
     """Raised when configuration validation fails."""
@@ -71,6 +73,21 @@ def _check_unknown_keys(
         if key not in known:
             hint = _suggest(key, known)
             raise ConfigError(f"unknown config key '{key}' in {section_label}{hint}")
+
+
+def _check_unknown_sections(toml: dict[str, Any]) -> None:
+    """Raise ConfigError for any TOML table whose name is not a known section."""
+    for key, value in toml.items():
+        if not isinstance(value, dict):
+            continue
+        if key in _KNOWN_SECTIONS:
+            continue
+        closest = min(_KNOWN_SECTIONS, key=lambda k: _levenshtein(key.lower(), k.lower()))
+        if _levenshtein(key.lower(), closest.lower()) <= 3:
+            hint = f" — did you mean '[{closest}]'?"
+        else:
+            hint = ""
+        raise ConfigError(f"unknown config section '[{key}]'{hint}")
 
 
 def _resolve_config_path(explicit: Path | None) -> Path | None:
@@ -238,6 +255,7 @@ def load_config(path: Path | None, command: str) -> BaseConfig:
         globals_dict = _extract_globals(toml_data)
 
     try:
+        _check_unknown_sections(toml_data)
         if command == "scan":
             return _build_scan(toml_data, globals_dict)
         if command == "merge":
