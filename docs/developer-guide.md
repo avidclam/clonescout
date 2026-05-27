@@ -12,7 +12,7 @@
 - Core logic (scanning, merging, analysis) should have positive-path + edge-case tests.
 
 ```bash
-python3 -m pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```
 
 ---
@@ -43,13 +43,13 @@ CalVer: `2026.05`, `2026.06`, etc.
 ## Build
 
 ```bash
-python3 scripts/build_zipapp.py
+.venv/bin/python scripts/build_zipapp.py
 ```
 
 Which runs:
 
 ```bash
-python3 -m zipapp src/clonescout \
+.venv/bin/python -m zipapp src/clonescout \
     -o dist/clonescout-2026-05.pyz \
     -m "clonescout.__main__:main" \
     -p "/usr/bin/env python3"
@@ -62,10 +62,10 @@ Output: `dist/clonescout-2026-05.pyz`. No Makefile.
 ## Day-to-Day
 
 ```bash
-python3 -m ruff check src/    # lint
-python3 -m mypy src/          # type check
-python3 -m pytest tests/ -v   # test
-python3 scripts/build_zipapp.py  # build
+.venv/bin/python -m ruff check src/    # lint
+.venv/bin/python -m mypy src/          # type check
+.venv/bin/python -m pytest tests/ -v   # test
+.venv/bin/python scripts/build_zipapp.py  # build
 ```
 
 ---
