@@ -80,3 +80,39 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "SIM", "TCH"]
 ```
+
+## Shell Workflow Helpers
+
+The file `scripts/git-workflow.sh` provides three shell functions for working with
+GitHub Issues and feature branches: `issue-start`, `issue-status`, and `issue-finish`.
+
+### Setup
+
+The setup relies on a convention in `~/.bashrc` that auto-sources every `*.sh` file
+from `~/.bash_functions_d/` at shell startup:
+
+    # Dynamically load all custom functions from the functions directory
+    if [ -d ~/.bash_functions_d ]; then
+        for func_file in ~/.bash_functions_d/*.sh; do
+            [ -e "$func_file" ] && . "$func_file"
+        done
+        unset func_file
+    fi
+
+If this block is not yet in your `~/.bashrc`, add it first.
+
+Then create a symbolic link from that directory into the project:
+
+    ln -s "$(pwd)/scripts/git-workflow.sh" ~/.bash_functions_d/clonescout-git.sh
+
+Run this once from the project root. Because it's a symlink (not a copy), the helpers
+stay in sync with the project automatically on every `git pull`.
+
+Reload your shell to activate:
+
+    source ~/.bashrc
+
+### Prerequisites
+
+- `gh` (GitHub CLI) must be installed and authenticated (`gh auth login`)
+- Issues are stored under `issues/<slug>.md` in the project root
