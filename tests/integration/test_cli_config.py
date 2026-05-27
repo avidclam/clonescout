@@ -41,7 +41,7 @@ class TestIntegration:
     def test_unknown_toml_key_exits_1(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Unknown key in [scan] section exits with code 1."""
+        """Unknown key in [scan] section exits with code 1 and suggests correction."""
         config_file = tmp_path / "clonescout.toml"
         config_file.write_text(
             "[scan]\nroot = ['/data']\noutput = 'out.zip'\nrrot = 'typo'\n"
@@ -51,6 +51,7 @@ class TestIntegration:
         assert exc.value.code == EXIT_BAD_ARGS
         captured = capsys.readouterr()
         assert "unknown config key" in captured.err.lower()
+        assert "did you mean 'root'" in captured.err
 
     def test_missing_config_file_default_is_ok(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

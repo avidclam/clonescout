@@ -47,7 +47,9 @@ class _SuggestingParser(argparse.ArgumentParser):
         if message.startswith("unrecognized arguments:"):
             bad = message[len("unrecognized arguments:"):].strip().split()[0]
             known = frozenset(_collect_option_strings(self))
-            hint = _suggest(bad, known)
+            hint = ""
+            if bad.startswith("--"):
+                hint = _suggest(bad, known)
             if hint:
                 message = f"unrecognized arguments: {bad}{hint}"
         super().error(message)

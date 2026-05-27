@@ -257,6 +257,28 @@ class TestLoadConfig:
         assert isinstance(cfg, BaseConfig)
         assert cfg.force is True
 
+    def test_suggests_for_toml_scan_typo(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        path = self._write_toml(
+            "[scan]\nrrot = ['/tmp']\nroot = ['/tmp']\noutput = 'out.zip'\n"
+        )
+        with pytest.raises(SystemExit) as exc:
+            load_config(path, "scan")
+        assert exc.value.code == EXIT_BAD_ARGS
+        captured = capsys.readouterr()
+        assert "unknown config key 'rrot' in [scan]" in captured.err
+        assert "did you mean 'root'" in captured.err
+
+    def test_suggests_for_toml_merge_typo(self, capsys) -> None:  # type: ignore[no-untyped-def]
+        path = self._write_toml(
+            "[merge]\noutptu = 'merged.zip'\ninput = ['a.zip', 'b.zip']\noutput = 'merged.zip'\n"
+        )
+        with pytest.raises(SystemExit) as exc:
+            load_config(path, "merge")
+        assert exc.value.code == EXIT_BAD_ARGS
+        captured = capsys.readouterr()
+        assert "unknown config key 'outptu' in [merge]" in captured.err
+        assert "did you mean 'output'" in captured.err
+
     def test_suggest_long_form_key(self, capsys) -> None:  # type: ignore[no-untyped-def]
         path = self._write_toml(
             "[scan]\n--rrot = ['/tmp']\nroot = ['/tmp']\noutput = 'out.zip'\n"
@@ -268,7 +290,7 @@ class TestLoadConfig:
         assert "unknown config key" in captured.err.lower()
         assert "did you mean" in captured.err.lower()
 
-    def test_no_suggest_for_short_form_key(self, capsys) -> None:  # type: ignore[no-untyped-def]
+    def test_toml_key_with_dash_gets_suggestion(self, capsys) -> None:  # type: ignore[no-untyped-def]
         path = self._write_toml(
             "[scan]\n-root = ['/tmp']\nroot = ['/tmp']\noutput = 'out.zip'\n"
         )
@@ -277,16 +299,23 @@ class TestLoadConfig:
         assert exc.value.code == EXIT_BAD_ARGS
         captured = capsys.readouterr()
         assert "unknown config key" in captured.err.lower()
-        assert "did you mean" not in captured.err.lower()
+        assert "did you mean" in captured.err.lower()
 
 
 class TestSuggest:
+    def test_suggests_for_close_match(self) -> None:
+        hint = _suggest("rrot", frozenset({"root", "node", "skip"}))
+        assert "did you mean" in hint
+        assert "root" in hint
+
+    def test_no_suggest_for_distant_key(self) -> None:
+        hint = _suggest("-x", frozenset({"root", "node", "skip"}))
+        assert hint == ""
+
+    def test_no_suggest_for_empty_known(self) -> None:
+        hint = _suggest("rrot", frozenset())
+        assert hint == ""
+
     def test_suggests_for_long_form_key(self) -> None:
         hint = _suggest("--rrot", frozenset({"root", "node", "skip"}))
         assert "did you mean" in hint
-
-    def test_no_suggest_for_short_form_key(self) -> None:
-        hint = _suggest("-x", frozenset({"root", "node", "skip"}))
-        assert hint == ""
-        hint2 = _suggest("-root", frozenset({"root", "node", "skip"}))
-        assert hint2 == ""

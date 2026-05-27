@@ -53,7 +53,7 @@ def _levenshtein(a: str, b: str) -> int:
 
 def _suggest(key: str, known: frozenset[str]) -> str:
     """Return a 'did you mean?' hint for an unknown key, or an empty string."""
-    if not key.startswith("--"):
+    if not known:
         return ""
     closest = min(known, key=lambda k: _levenshtein(key.lower(), k.lower()))
     if _levenshtein(key.lower(), closest.lower()) <= 3:
