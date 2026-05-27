@@ -410,6 +410,9 @@ def _strip_comments(text: str) -> str:
     - Full-line comments (lines where # is the first non-whitespace character).
     - Inline comments (trailing # … on a key = value line).
     - Collapses runs of blank lines into a single blank line.
+
+    Respects TOML quoting rules: a # inside a quoted string is not treated
+    as a comment delimiter.
     """
     lines = text.split("\n")
     result: list[str] = []
@@ -423,7 +426,7 @@ def _strip_comments(text: str) -> str:
                 prev_blank = True
             continue
         if "#" in line:
-            line = line.split("#", 1)[0].rstrip()
+            line = _strip_inline_comment(line)
         result.append(line)
         prev_blank = False
 
@@ -433,3 +436,29 @@ def _strip_comments(text: str) -> str:
         result.pop(0)
 
     return "\n".join(result) + "\n"
+
+
+def _strip_inline_comment(line: str) -> str:
+    """Remove trailing #-comment from *line*, respecting TOML quoted strings.
+
+    A ``#`` is only treated as a comment delimiter when it appears outside
+    single- and double-quoted strings.  Backslash escapes are honoured inside
+    double-quoted strings so that ``\\"`` does not close the string.
+    """
+    in_single = False
+    in_double = False
+    escape_next = False
+    for i, ch in enumerate(line):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\" and in_double:
+            escape_next = True
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == "#" and not in_single and not in_double:
+            return line[:i].rstrip()
+    return line.rstrip()

@@ -300,6 +300,43 @@ class TestStripComments:
         assert "[scan]" in result
         assert "key = value" in result
 
+    def test_preserves_hash_in_double_quoted_value(self) -> None:
+        text = 'name = "hello#world"\n'
+        result = _strip_comments(text)
+        assert 'name = "hello#world"' in result
+
+    def test_preserves_hash_in_single_quoted_value(self) -> None:
+        text = "name = 'hello#world'\n"
+        result = _strip_comments(text)
+        assert "name = 'hello#world'" in result
+
+    def test_strips_trailing_comment_after_quoted_value(self) -> None:
+        text = 'output = "file.zip" # trailing comment\n'
+        result = _strip_comments(text)
+        assert result.rstrip() == 'output = "file.zip"'
+
+    def test_preserves_hash_in_array_value(self) -> None:
+        text = 'exclude = ["(?i)/\\.tmp/", "color=#ff0000"]\n'
+        result = _strip_comments(text)
+        assert "color=#ff0000" in result
+
+    def test_preserves_hash_in_value_with_trailing_comment(self) -> None:
+        text = 'name = "hello#world" # comment\n'
+        result = _strip_comments(text)
+        assert 'name = "hello#world"' in result
+        assert "# comment" not in result
+
+    def test_handles_escaped_quote_in_double_quoted_value(self) -> None:
+        text = 'pattern = "she said \\"hello#world\\"" # note\n'
+        result = _strip_comments(text)
+        assert 'hello#world' in result
+        assert "# note" not in result
+
+    def test_preserves_hash_after_escaped_backslash(self) -> None:
+        text = 'value = "path\\\\#notacomment"\n'
+        result = _strip_comments(text)
+        assert "#notacomment" in result
+
 
 class TestMain:
     def test_help_exits_zero(self) -> None:
