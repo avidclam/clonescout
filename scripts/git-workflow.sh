@@ -6,7 +6,7 @@
 # Usage: source scripts/git-workflow.sh
 [[ "${BASH_SOURCE[0]}" == "${0}" ]] && echo "Error: source this file, don't run it directly." && exit 1
 
-# 1. Start working on an issue (create branch + GitHub Issue)
+# 1. Start working on an issue (create branch from issue file)
 function issue-start() {
     if [ -z "$1" ]; then
         echo "❌ Error: Specify the filename without extension (e.g., issue-start 0001-cli-config)"
@@ -30,30 +30,11 @@ function issue-start() {
         return 1
     }
 
-    echo "📝 Creating GitHub Issue: \"$title\"..."
-    local gh_output
-    gh_output=$(gh issue create --title "$title" --body-file "$file") || {
-        echo "❌ Failed to create GitHub Issue. Rolling back branch..."
-        git checkout main
-        git branch -D "feature/$slug" 2>/dev/null
-        return 1
-    }
-
-    # Extract the issue number from the GitHub CLI output URL
-    local issue_num=$(echo "$gh_output" | grep -oE '[0-9]+$')
-
-    if [ -n "$issue_num" ]; then
-        git config "branch.feature/${slug}.gh-issue-num" "$issue_num"
-        echo "✅ Issue #$issue_num created, branch feature/$slug ready."
-        echo ""
-        echo "Next steps:"
-        echo "  1. Implement the feature"
-        echo "  2. Run: issue-finish"
-    else
-        echo "⚠️  Branch created but could not determine Issue number."
-        echo "   Set it manually:"
-        echo "     git config 'branch.feature/${slug}.gh-issue-num' <NUMBER>"
-    fi
+    echo "✅ Branch feature/$slug ready."
+    echo ""
+    echo "Next steps:"
+    echo "  1. Implement the feature"
+    echo "  2. Run: issue-finish"
 }
 
 # 2. Show current issue-branch status
@@ -67,11 +48,9 @@ function issue-status() {
 
     local slug=${branch#feature/}
     local file="issues/${slug}.md"
-    local issue_num=$(git config "branch.${branch}.gh-issue-num")
 
     echo "🔍 Current branch: $branch"
     echo "   Issue file:     ${file} $([ -f "$file" ] && echo '✅' || echo '❌ not found')"
-    echo "   GitHub Issue:   ${issue_num:+#$issue_num}${issue_num:-⚠️  not set}"
     echo ""
     echo "📦 Working tree status:"
     git status --short
@@ -100,22 +79,8 @@ function issue-finish() {
     # Extract title (same logic as issue-start)
     local title=$(head -n 1 "$file" | sed -E 's/^\*\*//; s/\*\*$//; s/^#+[[:space:]]*//; s/^"(.*)"$/\1/; s/`//g')
 
-    # Resolve GitHub Issue number
-    local issue_num=$(git config "branch.${branch}.gh-issue-num")
-    if [ -z "$issue_num" ]; then
-        echo "⚠️  Issue number not found in git config. Searching via gh CLI..."
-        issue_num=$(gh issue list --search "\"$title\"" --json number --jq '.[0].number' 2>/dev/null)
-    fi
-    if [ -z "$issue_num" ] || [ "$issue_num" = "null" ]; then
-        echo "❌ Error: Could not determine GitHub Issue number."
-        echo "   Set it manually and retry:"
-        echo "     git config 'branch.${branch}.gh-issue-num' <NUMBER>"
-        return 1
-    fi
-
     echo "📋 Summary:"
     echo "   Branch:  $branch"
-    echo "   Issue:   #$issue_num"
     echo "   Title:   $title"
     echo ""
 
@@ -161,14 +126,14 @@ function issue-finish() {
     echo "🔀 Squash-merging $branch into main..."
     git merge --squash "$branch" || {
         echo "❌ Merge conflict! Resolve conflicts, then run:"
-        echo "     git commit -m '${title} (Closes #${issue_num})'"
+         echo "     git commit -m '${title}'"
         echo "     git push origin main"
         echo "     git branch -D $branch"
         return 1
     }
 
     # The single definitive commit on main
-    git commit -m "${title} (Closes #${issue_num})" || {
+    git commit -m "${title}" || {
         echo "❌ Commit on main failed."
         return 1
     }
@@ -182,17 +147,10 @@ function issue-finish() {
         return 1
     }
 
-    # Explicitly close the issue via GitHub API (belt and suspenders)
-    echo "🔒 Closing GitHub Issue #$issue_num..."
-    gh issue close "$issue_num" --comment "Merged via squash commit on main." 2>/dev/null || {
-        echo "⚠️  Could not close issue via API (will be closed by commit message on GitHub)."
-    }
-
-    # Clean up: remove git config and delete feature branch
+    # Clean up: delete feature branch
     echo "🧹 Cleaning up..."
-    git config --unset "branch.${branch}.gh-issue-num" 2>/dev/null
     git branch -D "$branch"
 
     echo ""
-    echo "🎉 Done! Issue #$issue_num is closed and merged into main."
+    echo "🎉 Done! Merged $branch into main."
 }

@@ -32,6 +32,11 @@ Lightweight conventional commits:
 
 Example: `feat: add LSH banding for T1 tier matching`
 
+Branch naming follows similar prefix convention: `feature/<slug>`, where `<slug>`
+is part of the corresponding file in `issues/`: `issues/${slug}.md`.
+Example: `feature/0001-cli-config.md`.
+The `issue-start` helper creates branches with this prefix automatically.
+
 ---
 
 ## Versioning
