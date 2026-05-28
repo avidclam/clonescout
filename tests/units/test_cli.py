@@ -365,7 +365,12 @@ class TestMain:
         captured = capsys.readouterr()
         assert "Not implemented" in captured.out
 
-    def test_scan_stub_prints_not_implemented(self, capsys) -> None:  # type: ignore[no-untyped-def]
-        main(["scan", "-r", "/tmp", "-o", "out.zip"])
+    def test_scan_writes_output_zip(self, tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+        root = tmp_path / "scanme"
+        root.mkdir()
+        (root / "a.txt").write_text("data")
+        output = tmp_path / "out.zip"
+        main(["scan", "-r", str(root), "-o", str(output)])
         captured = capsys.readouterr()
-        assert "Not implemented" in captured.err
+        assert "error" not in captured.err.lower()
+        assert output.exists()

@@ -163,6 +163,9 @@ Before inserting a `FileRecord` into metadata, build the candidate path string:
 {folder_parent}/{folder_name}/{stem}{suffix}
 ```
 
+Empty components (folder_parent and folder_name can both be "") are omitted from the join — 
+no leading or consecutive slashes are inserted.
+
 Apply all compiled regex patterns from `config.exclude`. If any pattern matches,
 skip the file and emit `logging.debug()`.
 
@@ -197,7 +200,6 @@ with integer values not converted to strings.
   "hostname": "myhost",
   "roots": ["/data/photos", "/backups/archive.zip"],
   "files_scanned": 18423,
-  "files_skipped": 312,
   "files_excluded": 47
 }
 ```
@@ -209,7 +211,6 @@ with integer values not converted to strings.
 | `hostname` | `socket.gethostname()` — always actual hostname, independent of `node` config |
 | `roots` | Resolved absolute paths as given to the scanners |
 | `files_scanned` | FileRecords successfully inserted into metadata |
-| `files_skipped` | Skipped due to `skip` directory name match |
 | `files_excluded` | Skipped due to `exclude` regex match |
 
 The ZIP is written with `compression=ZIP_DEFLATED`.

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import os
+from typing import TYPE_CHECKING
 
 import pytest
 
 from clonescout.cli import main
 from clonescout.constants import EXIT_BAD_ARGS
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestIntegration:
@@ -15,28 +19,35 @@ class TestIntegration:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """CLI --node overrides TOML [scan] node."""
+        root = tmp_path / "scanme"
+        root.mkdir()
+        (root / "a.txt").write_text("data")
+        output = tmp_path / "out.zip"
         config_file = tmp_path / "clonescout.toml"
         config_file.write_text(
-            "[scan]\nroot = ['/data']\noutput = 'out.zip'\nnode = 'config-node'\n"
+            f"[scan]\nroot = ['{root}']\noutput = '{output}'\nnode = 'config-node'\n"
         )
         main(["-c", str(config_file), "scan", "-n", "cli-node"])
-        # The scan command exits 0 and prints "Not implemented." to stderr
         captured = capsys.readouterr()
-        assert "Not implemented" in captured.err
+        assert "error" not in captured.err.lower()
+        assert output.exists()
 
     def test_list_cli_replaces_config(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """CLI --root replaces TOML root list entirely."""
+        root = tmp_path / "scanme"
+        root.mkdir()
+        (root / "a.txt").write_text("data")
+        output = tmp_path / "out.zip"
         config_file = tmp_path / "clonescout.toml"
         config_file.write_text(
-            "[scan]\nroot = ['/old1', '/old2']\noutput = 'out.zip'\n"
+            f"[scan]\nroot = ['/old1', '/old2']\noutput = '{output}'\n"
         )
-        # Should work — CLI root replaces TOML root
-        main(["-c", str(config_file), "scan", "-r", "/new"])
+        main(["-c", str(config_file), "scan", "-r", str(root)])
         captured = capsys.readouterr()
-        assert "Not implemented" in captured.err
         assert "error" not in captured.err.lower()
+        assert output.exists()
 
     def test_unknown_toml_key_exits_1(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -57,14 +68,17 @@ class TestIntegration:
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """No default clonescout.toml → proceed with CLI args and defaults."""
-        import os
+        root = tmp_path / "scanme"
+        root.mkdir()
+        (root / "a.txt").write_text("data")
+        output = tmp_path / "out.zip"
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
-            # No clonescout.toml in this directory
-            main(["scan", "-r", "/some/path", "-o", "out.zip"])
+            main(["scan", "-r", str(root), "-o", str(output)])
             captured = capsys.readouterr()
             assert "error" not in captured.err.lower()
+            assert output.exists()
         finally:
             os.chdir(old_cwd)
 
@@ -78,11 +92,14 @@ class TestIntegration:
         assert exc.value.code == EXIT_BAD_ARGS
 
     def test_scan_invalid_regex_in_cli_exits_1(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """CLI --exclude with invalid regex exits with code 1."""
+        root = tmp_path / "scanme"
+        root.mkdir()
+        output = tmp_path / "out.zip"
         with pytest.raises(SystemExit) as exc:
-            main(["scan", "-r", "/tmp", "-o", "out.zip", "-e", "[invalid"])
+            main(["scan", "-r", str(root), "-o", str(output), "-e", "[invalid"])
         assert exc.value.code == EXIT_BAD_ARGS
 
     def test_merge_fewer_than_two_inputs_exits_1(
