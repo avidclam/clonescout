@@ -357,17 +357,23 @@ def main(argv: list[str] | None = None) -> None:
 
 def cmd_scan(config: ScanConfig) -> None:
     """Scan directories and produce a metadata ZIP."""
-    print("Not implemented.", file=sys.stderr)
+    from clonescout.commands.scan import run_scan
+
+    run_scan(config)
 
 
 def cmd_merge(config: MergeConfig) -> None:
     """Merge multiple metadata ZIPs into one."""
-    print("Not implemented.", file=sys.stderr)
+    from clonescout.commands.merge import run_merge
+
+    run_merge(config)
 
 
 def cmd_report(config: ReportConfig) -> None:
     """Analyze metadata and produce a Markdown duplicate report."""
-    print("Not implemented.", file=sys.stderr)
+    from clonescout.commands.report import run_report
+
+    run_report(config)
 
 
 def cmd_sample(args: argparse.Namespace) -> None:

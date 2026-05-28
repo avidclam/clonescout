@@ -34,7 +34,12 @@ Never install anything — the venv already exists and has all dependencies.
 
 ```
 ├── src/clonescout/
-│   ├── cli.py            # argparse: scan | merge | report | sample
+│   ├── cli.py            # argparse: scan | merge | report | sample; dispatch only
+│   ├── commands/
+│   │   ├── __init__.py
+│   │   ├── scan.py       # run_scan(config: ScanConfig) — scan orchestration
+│   │   ├── merge.py      # run_merge(config: MergeConfig) — merge orchestration
+│   │   └── report.py     # run_report(config: ReportConfig) — report orchestration
 │   ├── scanner.py        # Recursive metadata collection (file system)
 │   ├── archive.py        # .zip/.tar/.tar.gz reading without extraction
 │   ├── storage.py        # Vocabulary + JSON + compressed pickle
@@ -51,15 +56,34 @@ Never install anything — the venv already exists and has all dependencies.
 ├── scripts/              # build_zipapp.py (not yet created)
 ├── docs/
 │   ├── blueprints/
-│   │   └── cli_config.md # Specification for `cli.py`, `__main__.py`, and `config.py`
+│   │   ├── cli_config.md     # Specification for `cli.py`, `__main__.py`, and `config.py`
+│   │   └── scan_blueprint.md # Specification for the scan command and related modules
 │   └── developer-guide.md
 ├── dist/                 # Build output (gitignored)
 ├── sandbox/              # Experiments — fully gitignored
 └── PROJECT.md            # Full product specification
 ```
 
-Core flow: `cli → scanner → storage` (local), then `merge` (cross-machine), then `analysis → report`.
-Archive scanning: `archive` module stands in for `scanner` when source is a zip/tar/tar.gz.
+### CLI / Commands separation
+
+`cli.py` owns argument parsing, config loading, CLI/config merging, and dispatch.
+It does **not** contain business logic. Each `cmd_*` function in `cli.py` is a thin
+wrapper that delegates to the corresponding `commands/` module:
+
+```python
+def cmd_scan(config: ScanConfig) -> None:
+    from clonescout.commands.scan import run_scan
+    run_scan(config)
+```
+
+`cmd_sample` is an exception — it is fully implemented in `cli.py` because it is
+lightweight, already complete, and will not grow.
+
+Business logic for each command lives in `commands/scan.py`, `commands/merge.py`,
+and `commands/report.py` respectively.
+
+Core flow: `cli → commands/scan → scanner/archive → storage` (local), then
+`commands/merge → merge` (cross-machine), then `commands/report → analysis → report`.
 
 ## Coding Conventions
 
