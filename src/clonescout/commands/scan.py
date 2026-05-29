@@ -77,7 +77,14 @@ def run_scan(config: ScanConfig) -> None:
     }
 
     try:
-        write_zip(Path(config.output), vocab, metadata, run_info, force=config.force)
+        write_zip(
+            Path(config.output),
+            vocab,
+            metadata,
+            run_info,
+            force=config.force,
+            indent=2 if config.verbosity == "DEBUG" else None,
+        )
     except FileExistsError:
         print(
             f"error: output file already exists: {config.output}"

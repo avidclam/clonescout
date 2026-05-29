@@ -292,6 +292,7 @@ def write_zip(
     metadata: dict[str, Any],
     run_info: dict[str, Any],
     force: bool,
+    indent: int | None = None,
 ) -> None:
     """Write metadata, vocabulary, and run info to a compressed ZIP archive.
 
@@ -308,6 +309,8 @@ def write_zip(
         metadata: The nested metadata dict.
         run_info: Arbitrary run-information dict (caller provides contents).
         force: If ``True``, overwrite *path* when it already exists.
+        indent: If a positive integer, pretty-print each JSON member with that
+            indentation level.  ``None`` (the default) produces compact output.
 
     Raises:
         FileExistsError: If *path* exists and *force* is ``False``.
@@ -316,14 +319,16 @@ def write_zip(
         raise FileExistsError(f"Output file already exists: {path}")
 
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("vocab.json", json.dumps(vocab.as_list(), ensure_ascii=False))
+        zf.writestr(
+            "vocab.json", json.dumps(vocab.as_list(), ensure_ascii=False, indent=indent)
+        )
         zf.writestr(
             "metadata.json",
-            json.dumps(_keys_to_str(metadata), ensure_ascii=False),
+            json.dumps(_keys_to_str(metadata), ensure_ascii=False, indent=indent),
         )
         zf.writestr(
             "run.json",
-            json.dumps(run_info, ensure_ascii=False, default=str),
+            json.dumps(run_info, ensure_ascii=False, default=str, indent=indent),
         )
 
 
