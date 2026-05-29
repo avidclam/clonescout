@@ -11,8 +11,34 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
-from clonescout.archive import TarScanner, ZipScanner
+from clonescout.archive import TarScanner, ZipScanner, _normalize_entry_path
 from clonescout.config import ScanConfig
+
+
+class TestNormalizeEntryPath:
+    def test_bare_path(self) -> None:
+        assert _normalize_entry_path("data/csv/inventory.csv") == "data/csv/inventory.csv"
+
+    def test_dot_slash_prefix(self) -> None:
+        assert _normalize_entry_path("./data/csv/inventory.csv") == "data/csv/inventory.csv"
+
+    def test_absolute_prefix(self) -> None:
+        assert _normalize_entry_path("/data/csv/inventory.csv") == "data/csv/inventory.csv"
+
+    def test_nested_dot_slash(self) -> None:
+        assert _normalize_entry_path("././foo/bar") == "foo/bar"
+
+    def test_empty_string(self) -> None:
+        assert _normalize_entry_path("") == ""
+
+    def test_dot(self) -> None:
+        assert _normalize_entry_path(".") == ""
+
+    def test_dot_slash_dot_slash_prefix(self) -> None:
+        assert _normalize_entry_path("./././data/file.txt") == "data/file.txt"
+
+    def test_double_slash_cleaned(self) -> None:
+        assert _normalize_entry_path("data//file.txt") == "data/file.txt"
 
 
 class TestZipScanner:
@@ -190,6 +216,22 @@ class TestTarScanner:
         warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
         assert len(warnings) >= 1
         assert "Cannot read archive" in warnings[0].message
+
+    def test_conttype_member_is_skipped(self, tmp_path: Path) -> None:
+        archive_path = tmp_path / "test.tar"
+        with tarfile.open(archive_path, "w") as tf:
+            _add_tar_member(tf, "data/file.txt", b"content")
+            cont = tarfile.TarInfo(name="data/file.txt")
+            cont.type = tarfile.CONTTYPE
+            cont.size = len(b"more content")
+            tf.addfile(cont, io.BytesIO(b"more content"))
+
+        cfg = ScanConfig(root=["dummy"], output="dummy.zip")
+        scanner = TarScanner(archive_path, cfg)
+        records = list(scanner)
+
+        assert len(records) == 1
+        assert records[0].stem == "file"
 
 
 def _add_tar_member(tf: tarfile.TarFile, name: str, data: bytes) -> None:

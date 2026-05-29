@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import posixpath
 import tarfile
 import zipfile
 from datetime import datetime
@@ -14,6 +15,26 @@ if TYPE_CHECKING:
 
 from clonescout.models import FileRecord
 from clonescout.scanner import BaseScanner
+
+
+def _normalize_entry_path(name: str) -> str:
+    """Strip leading './' and '/' from an archive entry name.
+
+    Both ZIP and TAR can produce paths with these prefixes depending on
+    how the archive was created. Stripping them ensures that equivalent
+    paths from different archive types produce identical metadata keys.
+
+    Args:
+        name: Raw entry name from ZipInfo.filename or TarInfo.name.
+
+    Returns:
+        Clean relative POSIX path (empty string for root-level entries).
+        Returns ``""`` for empty-string and ``"."`` inputs.
+    """
+    cleaned = posixpath.normpath(name)
+    if cleaned == ".":
+        return ""
+    return cleaned.lstrip("/")
 
 
 class ZipScanner(BaseScanner):
@@ -28,7 +49,7 @@ class ZipScanner(BaseScanner):
                     if zip_info.is_dir():
                         continue
 
-                    member_path = zip_info.filename
+                    member_path = _normalize_entry_path(zip_info.filename)
                     if any(
                         comp in self.config.skip
                         for comp in member_path.split("/")
@@ -78,10 +99,10 @@ class TarScanner(BaseScanner):
         try:
             with tarfile.open(self.root) as tf:
                 for member in tf:
-                    if not member.isfile():
+                    if not member.isfile() or member.type == tarfile.CONTTYPE:
                         continue
 
-                    member_path = member.name
+                    member_path = _normalize_entry_path(member.name)
                     if any(
                         comp in self.config.skip
                         for comp in member_path.split("/")

@@ -111,6 +111,61 @@ class TestRunScanArchive:
         leaf = metadata["test-node"][anchor_idx][vocab[""]][fn_idx][sf_idx][stem_idx]
         assert leaf[0] == "PDF"
 
+    def test_zip_and_tar_produce_equivalent_metadata(self, tmp_path: Path) -> None:
+        zip_archive = tmp_path / "test.zip"
+        with zipfile.ZipFile(zip_archive, "w") as zf:
+            zf.writestr("docs/report.pdf", b"pdf content")
+            zf.writestr("README.md", b"readme content")
+
+        tar_archive = tmp_path / "test.tar.gz"
+        with tarfile.open(tar_archive, "w:gz") as tf:
+            _add_tar_member(tf, "./docs/report.pdf", b"pdf content")
+            _add_tar_member(tf, "./README.md", b"readme content")
+
+        zip_out = tmp_path / "zip_out.zip"
+        zip_cfg = ScanConfig(
+            node="test-node", root=[str(zip_archive)], output=str(zip_out)
+        )
+        run_scan(zip_cfg)
+
+        tar_out = tmp_path / "tar_out.zip"
+        tar_cfg = ScanConfig(
+            node="test-node", root=[str(tar_archive)], output=str(tar_out)
+        )
+        run_scan(tar_cfg)
+
+        zip_vocab, zip_meta, _ = read_zip(zip_out)
+        tar_vocab, tar_meta, _ = read_zip(tar_out)
+
+        for name in ("docs", "report", ".pdf", "README", ".md"):
+            assert name in zip_vocab
+            assert name in tar_vocab
+
+        zip_anchor = zip_vocab[zip_archive.resolve().as_posix()]
+        tar_anchor = tar_vocab[tar_archive.resolve().as_posix()]
+
+        zip_leaf = zip_meta["test-node"][zip_anchor][zip_vocab[""]][
+            zip_vocab["docs"]
+        ][zip_vocab[".pdf"]][zip_vocab["report"]]
+        tar_leaf = tar_meta["test-node"][tar_anchor][tar_vocab[""]][
+            tar_vocab["docs"]
+        ][tar_vocab[".pdf"]][tar_vocab["report"]]
+        assert zip_leaf[0] == tar_leaf[0] == "PDF"
+        assert zip_leaf[1] == tar_leaf[1] == len(b"pdf content")
+        assert isinstance(zip_leaf[2], int)
+        assert isinstance(tar_leaf[2], int)
+
+        zip_leaf2 = zip_meta["test-node"][zip_anchor][zip_vocab[""]][
+            zip_vocab[""]
+        ][zip_vocab[".md"]][zip_vocab["README"]]
+        tar_leaf2 = tar_meta["test-node"][tar_anchor][tar_vocab[""]][
+            tar_vocab[""]
+        ][tar_vocab[".md"]][tar_vocab["README"]]
+        assert zip_leaf2[0] == tar_leaf2[0] == "MD"
+        assert zip_leaf2[1] == tar_leaf2[1] == len(b"readme content")
+        assert isinstance(zip_leaf2[2], int)
+        assert isinstance(tar_leaf2[2], int)
+
 
 class TestMixedRoots:
     def test_dir_and_zip_contribute_records(self, tmp_path: Path) -> None:
