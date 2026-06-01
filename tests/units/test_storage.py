@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,10 +19,13 @@ from clonescout.storage import (
     Vocabulary,
     _keys_to_int,
     _keys_to_str,
+    _recode,
     init_vocab,
     insert_record,
+    merge_metadata,
     read_zip,
     reset_counters,
+    write_merge_zip,
     write_zip,
 )
 
@@ -245,3 +250,174 @@ class TestZipRoundtrip:
         assert v2.as_list() == vocab.as_list()
         assert m2 == metadata
         assert r2 == run_info
+
+
+class TestRecode:
+    def test_recode_remaps_int_keys(self) -> None:
+        d = {"nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}}}
+        index_map = list(range(10, 20))
+
+        result = _recode(d, index_map)
+        expected = {"nodeA": {10: {11: {12: {13: {14: ("txt", 100, 200)}}}}}}
+        assert result == expected
+
+        assert d["nodeA"][0] is not result["nodeA"][10]
+
+    def test_recode_preserves_str_keys_and_leaf_tuples(self) -> None:
+        d = {"host": {0: ("ext", 42, 999)}}
+        index_map = [5]
+        result = _recode(d, index_map)
+        assert result == {"host": {5: ("ext", 42, 999)}}
+
+
+class TestMergeMetadata:
+    def test_merges_disjoint_sources(self) -> None:
+        meta1 = {"nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}}}
+        meta2 = {"nodeB": {0: {1: {2: {3: {4: ("pdf", 300, 400)}}}}}}
+        index_map = [0, 1, 2, 3, 4, 5, 6, 7]
+
+        result = merge_metadata([(meta1, index_map), (meta2, index_map)])
+        expected = {
+            "nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}},
+            "nodeB": {0: {1: {2: {3: {4: ("pdf", 300, 400)}}}}},
+        }
+        assert result == expected
+
+    def test_overlapping_takes_larger_mtime(self) -> None:
+        meta1 = {"nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}}}
+        meta2 = {"nodeA": {0: {1: {2: {3: {4: ("txt", 50, 300)}}}}}}
+        index_map = [0, 1, 2, 3, 4, 5, 6, 7]
+
+        result = merge_metadata([(meta1, index_map), (meta2, index_map)])
+        expected = {"nodeA": {0: {1: {2: {3: {4: ("txt", 50, 300)}}}}}}
+        assert result == expected
+
+    def test_equal_mtime_overwrites(self) -> None:
+        meta1 = {"nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}}}
+        meta2 = {"nodeA": {0: {1: {2: {3: {4: ("pdf", 50, 200)}}}}}}
+        index_map = [0, 1, 2, 3, 4, 5, 6, 7]
+
+        result = merge_metadata([(meta1, index_map), (meta2, index_map)])
+        expected = {"nodeA": {0: {1: {2: {3: {4: ("pdf", 50, 200)}}}}}}
+        assert result == expected
+
+    def test_collision_logging(self, caplog) -> None:  # type: ignore[no-untyped-def]
+        caplog.set_level(logging.DEBUG)
+        meta1 = {"nodeA": {0: {1: {2: {3: {4: ("txt", 100, 200)}}}}}}
+        meta2 = {"nodeA": {0: {1: {2: {3: {4: ("pdf", 50, 300)}}}}}}
+        index_map = [0, 1, 2, 3, 4, 5, 6, 7]
+
+        merge_metadata([(meta1, index_map), (meta2, index_map)])
+        collision_msgs = [r for r in caplog.records if r.levelno == logging.DEBUG]
+        assert len(collision_msgs) == 1
+
+
+class TestMergeZipRoundtrip:
+    def test_write_merge_zip_and_read_zip_roundtrip(self, tmp_path: Path) -> None:
+        vocab = init_vocab()
+        metadata: dict[str, dict] = {}
+        rec = FileRecord(
+            anchor="",
+            folder_parent="home/user",
+            folder_name="docs",
+            stem="report",
+            suffix=".pdf",
+            ext="PDF",
+            size=1024,
+            mtime=1234567890,
+        )
+        reset_counters()
+        insert_record(metadata, vocab, "myhost", rec)
+
+        merge_doc = {
+            "merge_info": {
+                "clonescout_version": "2026.05",
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "inputs": ["a.zip"],
+            },
+            "runs": [{"hostname": "test", "files_scanned": 1}],
+        }
+
+        zip_path = tmp_path / "merged.zip"
+        write_merge_zip(zip_path, vocab, metadata, merge_doc, force=False)
+        assert zip_path.exists()
+
+        v2, m2, info2 = read_zip(zip_path)
+        assert v2.as_list() == vocab.as_list()
+        assert m2 == metadata
+        assert info2 == merge_doc
+        assert "runs" in info2
+
+    def test_write_merge_zip_raises_when_exists_and_not_force(
+        self, tmp_path: Path
+    ) -> None:
+        zip_path = tmp_path / "test.zip"
+        zip_path.write_text("dummy")
+        vocab = init_vocab()
+        with pytest.raises(FileExistsError):
+            write_merge_zip(zip_path, vocab, {}, {}, force=False)
+
+    def test_write_merge_zip_overwrites_when_force(self, tmp_path: Path) -> None:
+        zip_path = tmp_path / "test.zip"
+        zip_path.write_text("dummy")
+        vocab = init_vocab()
+        merge_doc: dict[str, dict] = {}
+        metadata: dict[str, dict] = {}
+        write_merge_zip(zip_path, vocab, metadata, merge_doc, force=True)
+
+        v2, m2, info2 = read_zip(zip_path)
+        assert v2.as_list() == vocab.as_list()
+        assert m2 == metadata
+        assert info2 == merge_doc
+
+
+class TestReadZipExtended:
+    def test_falls_back_to_merge_json(self, tmp_path: Path) -> None:
+        vocab = init_vocab()
+        merge_doc = {"merge_info": {}, "runs": [{"hostname": "test"}]}
+        zip_path = tmp_path / "test.zip"
+        write_merge_zip(zip_path, vocab, {}, merge_doc, force=False)
+
+        _, _, info = read_zip(zip_path)
+        assert "runs" in info
+        assert info["runs"][0]["hostname"] == "test"
+
+    def test_prefers_merge_json_over_run_json(
+        self, tmp_path: Path, caplog
+    ) -> None:  # type: ignore[no-untyped-def]
+        caplog.set_level(logging.WARNING)
+
+        vocab = init_vocab()
+        zip_path = tmp_path / "test.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("vocab.json", json.dumps(vocab.as_list()))
+            zf.writestr("metadata.json", json.dumps({}))
+            zf.writestr("run.json", json.dumps({"from": "run"}))
+            zf.writestr("merge.json", json.dumps({"runs": [{"from": "merge"}]}))
+
+        _, _, info = read_zip(zip_path)
+        assert info == {"runs": [{"from": "merge"}]}
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "both merge.json and run.json" in r.message for r in warnings
+        )
+
+    def test_returns_empty_dict_when_no_info(
+        self, tmp_path: Path, caplog
+    ) -> None:  # type: ignore[no-untyped-def]
+        caplog.set_level(logging.WARNING)
+
+        vocab = init_vocab()
+        zip_path = tmp_path / "test.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("vocab.json", json.dumps(vocab.as_list()))
+            zf.writestr("metadata.json", json.dumps({}))
+
+        _, _, info = read_zip(zip_path)
+        assert info == {}
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert any(
+            "neither run.json nor merge.json" in r.message for r in warnings
+        )

@@ -9,6 +9,8 @@ import pytest
 
 from clonescout.cli import main
 from clonescout.constants import EXIT_BAD_ARGS
+from clonescout.models import FileRecord
+from clonescout.storage import init_vocab, insert_record, reset_counters, write_zip
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -111,12 +113,25 @@ class TestIntegration:
         assert exc.value.code == EXIT_BAD_ARGS
 
     def test_merge_with_two_inputs_works(
-        self, capsys: pytest.CaptureFixture[str]
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Merge with two inputs should not error."""
-        main(["merge", "-i", "a.zip", "-i", "b.zip", "-o", "merged.zip"])
-        captured = capsys.readouterr()
-        assert "Not implemented" in captured.err
+        zip_a = tmp_path / "a.zip"
+        zip_b = tmp_path / "b.zip"
+        output = tmp_path / "merged.zip"
+
+        for path in (zip_a, zip_b):
+            vocab = init_vocab()
+            metadata: dict = {}
+            reset_counters()
+            insert_record(
+                metadata, vocab, "test",
+                FileRecord("", "", "", "f", ".txt", "TXT", 0, 0),
+            )
+            write_zip(path, vocab, metadata, {"clonescout_version": "1"}, force=False)
+
+        main(["merge", "-i", str(zip_a), "-i", str(zip_b), "-o", str(output)])
+        assert output.exists()
 
     def test_sample_config_prints_unchanged(
         self, capsys: pytest.CaptureFixture[str]

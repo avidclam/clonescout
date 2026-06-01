@@ -332,24 +332,183 @@ def write_zip(
         )
 
 
+# --- Merge helpers ---
+
+
+def _recode(d: dict[Any, Any], index_map: list[int]) -> dict[Any, Any]:
+    """Recursively recode integer keys using index_map.
+
+    Args:
+        d: A metadata dict whose vocabulary-indexed keys (int) must be
+            translated to new positions in a merged vocabulary.
+        index_map: A list where ``index_map[old_idx] = new_idx``.
+
+    Returns:
+        A new dict with all ``int`` keys replaced by
+        ``index_map[old_key]``.  ``str`` keys and leaf ``(ext, size, mtime)``
+        tuples are copied unchanged.
+    """
+    result: dict[Any, Any] = {}
+    for k, v in d.items():
+        new_key: int | str = index_map[k] if isinstance(k, int) else k
+        if isinstance(v, dict):
+            result[new_key] = _recode(v, index_map)
+        else:
+            result[new_key] = v
+    return result
+
+
+def _deep_merge_into(target: dict[Any, Any], source: dict[Any, Any]) -> dict[Any, Any]:
+    """Recursively merge *source* into *target*, resolving leaf collisions.
+
+    At non-leaf levels ``dict.setdefault`` opens the corresponding subtree.
+    At leaf level (values are tuples, i.e. ``(ext, size, mtime)``):
+
+    - Vacant position → insert.
+    - Occupied position → keep the entry with the larger *mtime*
+      (index 2).  On equal *mtime*, the new entry overwrites.
+    - Log a ``DEBUG`` message for every collision.
+
+    Args:
+        target: The result dict being built.
+        source: A recoded metadata dict to merge in.
+
+    Returns:
+        *target* (mutated in-place).
+    """
+    for k, v in source.items():
+        if isinstance(v, dict):
+            target.setdefault(k, {})
+            _deep_merge_into(target[k], v)
+        else:
+            if k in target:
+                logging.debug(
+                    "Collision during metadata merge at leaf position"
+                )
+                existing = target[k]
+                if v[2] >= existing[2]:
+                    target[k] = v
+            else:
+                target[k] = v
+    return target
+
+
+def merge_metadata(
+    sources: list[tuple[dict[Any, Any], list[int]]],
+) -> dict[Any, Any]:
+    """Merge recoded metadata dicts into one, resolving leaf conflicts.
+
+    Args:
+        sources: A list of ``(metadata_dict, index_map)`` pairs, where
+            ``index_map[old_index] = new_index`` in the merged vocabulary.
+            Pairs are processed left-to-right; later entries win on
+            equal *mtime*.
+
+    Returns:
+        A single merged metadata dict using the merged vocabulary indices.
+    """
+    merged: dict[Any, Any] = {}
+    for meta, index_map in sources:
+        recoded = _recode(meta, index_map)
+        _deep_merge_into(merged, recoded)
+    return merged
+
+
+# --- Merge ZIP I/O ---
+
+
+def write_merge_zip(
+    path: Path,
+    vocab: Vocabulary,
+    metadata: dict[str, Any],
+    merge_doc: dict[str, Any],
+    force: bool,
+    indent: int | None = None,
+) -> None:
+    """Write a merge-result ZIP archive.
+
+    Like :func:`write_zip`, but writes ``merge.json`` instead of
+    ``run.json``.  The archive contains:
+
+    - ``vocab.json`` — vocabulary as a plain JSON list.
+    - ``metadata.json`` — nested metadata dict with all keys serialised as
+      strings.  Leaf tuples ``(ext, size, mtime)`` become JSON lists.
+    - ``merge.json`` — merge document with ``merge_info`` and ``runs``.
+
+    Args:
+        path: Destination path for the output ZIP file.
+        vocab: The merged Vocabulary to serialise.
+        metadata: The merged nested metadata dict.
+        merge_doc: The merge document (merge_info + runs list).
+        force: If ``True``, overwrite *path* when it already exists.
+        indent: If a positive integer, pretty-print each JSON member with that
+            indentation level.  ``None`` (the default) produces compact output.
+
+    Raises:
+        FileExistsError: If *path* exists and *force* is ``False``.
+    """
+    if path.exists() and not force:
+        raise FileExistsError(f"Output file already exists: {path}")
+
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "vocab.json", json.dumps(vocab.as_list(), ensure_ascii=False, indent=indent)
+        )
+        zf.writestr(
+            "metadata.json",
+            json.dumps(_keys_to_str(metadata), ensure_ascii=False, indent=indent),
+        )
+        zf.writestr(
+            "merge.json",
+            json.dumps(merge_doc, ensure_ascii=False, default=str, indent=indent),
+        )
+
+
 def read_zip(path: Path) -> tuple[Vocabulary, dict[Any, Any], dict[str, Any]]:
-    """Read a metadata ZIP archive written by :func:`write_zip`.
+    """Read a metadata ZIP archive written by :func:`write_zip` or :func:`write_merge_zip`.
+
+    Inspects the ZIP member list to determine which information payload is
+    present:
+
+    - If ``merge.json`` is present it is returned as the third element.
+      If ``run.json`` is also present it is ignored with a ``WARNING``.
+    - Else if ``run.json`` is present it is returned.
+    - If neither is present a ``WARNING`` is logged and an empty dict is
+      returned.  Callers distinguish merge-ZIP from scan-ZIP by checking
+      for the ``"runs"`` key.
 
     Args:
         path: Path to the ZIP file to read.
 
     Returns:
-        A tuple ``(vocab, metadata, run_info)`` where *vocab* is the
-        restored Vocabulary, *metadata* is the nested metadata dict with
-        integer keys restored, and *run_info* is the run-information dict.
+        A tuple ``(vocab, metadata, info)`` where *vocab* is the restored
+        Vocabulary, *metadata* is the nested metadata dict with integer keys
+        restored, and *info* is the run-information dict, the merge document,
+        or ``{}``.
     """
     with zipfile.ZipFile(path, "r") as zf:
         vocab_list: list[str] = json.loads(zf.read("vocab.json").decode())
         metadata_raw: dict[str, Any] = json.loads(
             zf.read("metadata.json").decode()
         )
-        run_info: dict[str, Any] = json.loads(zf.read("run.json").decode())
+
+        names = set(zf.namelist())
+        if "merge.json" in names:
+            info: dict[str, Any] = json.loads(zf.read("merge.json").decode())
+            if "run.json" in names:
+                logging.warning(
+                    "ZIP contains both merge.json and run.json; "
+                    "using merge.json, run.json ignored: %s",
+                    path,
+                )
+        elif "run.json" in names:
+            info = json.loads(zf.read("run.json").decode())
+        else:
+            logging.warning(
+                "ZIP contains neither run.json nor merge.json: %s", path
+            )
+            info = {}
 
     vocab = Vocabulary.from_list(vocab_list)
     metadata = _keys_to_int(metadata_raw)
-    return vocab, metadata, run_info
+    return vocab, metadata, info
