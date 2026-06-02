@@ -48,16 +48,16 @@ class FolderRecord:
     def folder_id(self) -> str:
         """Unique identifier for this folder across all nodes.
 
-        Format: ``node:anchor/folder_parent/folder_name``.
-        When *folder_parent* or *folder_name* is empty the leading ``/``
-        before that segment is omitted.
+        Format: ``node:anchor/[folder_parent][/folder_name]``.
+        Always starts with ``node:anchor/``.  folder_parent and folder_name
+        are appended only when non-empty, separated by ``/``.
         """
-        parts = [f"{self.node}:{self.anchor}"]
+        result = f"{self.node}:{self.anchor}/"
         if self.folder_parent:
-            parts.append(self.folder_parent)
+            result += self.folder_parent
         if self.folder_name:
-            parts.append(self.folder_name)
-        return "/".join(parts)
+            result += f"/{self.folder_name}"
+        return result
 
     @property
     def total_size(self) -> int:
