@@ -47,17 +47,27 @@ class FolderRecord:
     @property
     def folder_id(self) -> str:
         """Unique identifier for this folder across all nodes.
-
-        Format: ``node:anchor/[folder_parent][/folder_name]``.
-        Always starts with ``node:anchor/``.  folder_parent and folder_name
-        are appended only when non-empty, separated by ``/``.
+ 
+        Format: ``node:anchor/[folder_parent[/folder_name]|folder_name]``.
+        Always starts with ``node:anchor/``.  Then:
+ 
+        - If *folder_parent* is non-empty: appends ``folder_parent``, then
+          ``/folder_name`` if *folder_name* is also non-empty.
+        - If *folder_parent* is empty: appends ``folder_name`` directly
+          (no leading slash).
+ 
+        Examples: ``"nas:/"`` , ``"host:C:/"`` , ``"nas:/photos/2021"`` ,
+        ``"host:C:/Users"``.
         """
         result = f"{self.node}:{self.anchor}/"
         if self.folder_parent:
             result += self.folder_parent
-        if self.folder_name:
-            result += f"/{self.folder_name}"
+            if self.folder_name:
+                result += f"/{self.folder_name}"
+        else:
+            result += self.folder_name
         return result
+
 
     @property
     def total_size(self) -> int:
