@@ -8,7 +8,7 @@ It covers the two modules that everything else depends on:
 - `models.py` — the `FileRecord` dataclass
 - `storage.py` — in-memory metadata structure, vocabulary management, ZIP serialisation
 
-The full specification lives in `docs/blueprints/scan_blueprint.md`.
+The full specification lives in `docs/blueprints/scan-blueprint.md`.
 Read `AGENTS.md` and `PROJECT.md` before starting.
 
 ---

@@ -3,7 +3,7 @@
 ## Goal
 
 Implement argument parsing, TOML config loading, CLI/config merging, and the
-`Config` class hierarchy as specified in `docs/blueprints/cli_config.md`.
+`Config` class hierarchy as specified in `docs/blueprints/cli-config.md`.
 
 ## Modules to create
 
@@ -46,7 +46,7 @@ def load_config(path: Path | None, command: str) -> BaseConfig: ...
 - All `@dataclass`, validation in `__post_init__`
 - Unknown TOML keys: hard error naming the offending key (best-effort "did you mean?" suggestion)
 - Only the section relevant to the active command is validated
-- Field defaults and validation rules as specified in `docs/blueprints/cli_config.md`
+- Field defaults and validation rules as specified in `docs/blueprints/cli-config.md`
 
 ### DEBUG logging
 

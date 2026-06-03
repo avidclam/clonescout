@@ -18,7 +18,7 @@ No changes to `cli.py` are needed.
 
 **Prerequisite:** Issues 1 and 2 (data layer and scanners) must be merged first.
 
-The full specification lives in `docs/blueprints/scan_blueprint.md`.
+The full specification lives in `docs/blueprints/scan-blueprint.md`.
 Read `AGENTS.md` and `PROJECT.md` before starting.
 
 ---

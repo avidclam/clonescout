@@ -11,7 +11,7 @@ It covers filesystem and archive scanning:
 **Prerequisite:** Issue 1 (data layer) must be merged first.
 `FileRecord` from `models.py` and `ScanConfig` from `config.py` are used throughout.
 
-The full specification lives in `docs/blueprints/scan_blueprint.md`.
+The full specification lives in `docs/blueprints/scan-blueprint.md`.
 Read `AGENTS.md` and `PROJECT.md` before starting.
 
 ---

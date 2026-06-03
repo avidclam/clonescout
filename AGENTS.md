@@ -56,8 +56,8 @@ Never install anything — the venv already exists and has all dependencies.
 ├── scripts/              # build_zipapp.py (not yet created)
 ├── docs/
 │   ├── blueprints/
-│   │   ├── cli_config.md     # Specification for `cli.py`, `__main__.py`, and `config.py`
-│   │   └── scan_blueprint.md # Specification for the scan command and related modules
+│   │   ├── cli-config.md     # Specification for `cli.py`, `__main__.py`, and `config.py`
+│   │   └── scan-blueprint.md # Specification for the scan command and related modules
 │   └── developer-guide.md
 ├── dist/                 # Build output (gitignored)
 ├── sandbox/              # Experiments — fully gitignored

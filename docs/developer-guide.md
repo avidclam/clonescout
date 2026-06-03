@@ -86,6 +86,19 @@ target-version = "py311"
 select = ["E", "F", "I", "N", "W", "UP", "SIM", "TCH"]
 ```
 
+## Documentation Naming
+
+All documentation files under `docs/` and its subdirectories must use strict
+lowercase `kebab-case` — only lowercase letters, numbers, and hyphens. No
+spaces or underscores.
+
+| ❌ Bad | ✅ Good |
+|---|---|
+| `LSH and MinHash in Plain English.md` | `lsh-minhash-plain-english.md` |
+| `analysis_blueprint.md` | `analysis-blueprint.md` |
+
+---
+
 ## Shell Workflow Helpers
 
 The file `scripts/git-workflow.sh` provides three shell functions for working with
