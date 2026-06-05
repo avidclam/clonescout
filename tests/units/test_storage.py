@@ -20,7 +20,7 @@ from clonescout.storage import (
     _keys_to_int,
     _keys_to_str,
     _recode,
-    init_vocab,
+    init_vocabulary,
     insert_record,
     merge_metadata,
     read_zip,
@@ -32,21 +32,21 @@ from clonescout.storage import (
 
 class TestVocabulary:
     def test_init_vocab_seeds_anchors(self) -> None:
-        vocab = init_vocab()
-        assert vocab[""] == 0
-        assert vocab["A:"] == 1
-        assert vocab["Z:"] == 26
-        assert len(vocab) == 27
+        vocabulary = init_vocabulary()
+        assert vocabulary[""] == 0
+        assert vocabulary["A:"] == 1
+        assert vocabulary["Z:"] == 26
+        assert len(vocabulary) == 27
 
     def test_init_vocab_returns_fresh_instance(self) -> None:
-        v1 = init_vocab()
-        v2 = init_vocab()
+        v1 = init_vocabulary()
+        v2 = init_vocabulary()
         assert v1 is not v2
 
 
 class TestInsertRecord:
     def test_single_record_builds_correct_structure(self) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         rec = FileRecord(
             anchor="",
@@ -59,43 +59,43 @@ class TestInsertRecord:
             mtime=1234567890,
         )
         reset_counters()
-        insert_record(metadata, vocab, "myhost", rec)
+        insert_record(metadata, vocabulary, "myhost", rec)
 
         node = metadata["myhost"]
-        anchor_idx = vocab[""]
-        folder_parent_idx = vocab["home/user"]
-        folder_name_idx = vocab["docs"]
-        suffix_idx = vocab[".pdf"]
-        stem_idx = vocab["report"]
+        anchor_idx = vocabulary[""]
+        folder_parent_idx = vocabulary["home/user"]
+        folder_name_idx = vocabulary["docs"]
+        suffix_idx = vocabulary[".pdf"]
+        stem_idx = vocabulary["report"]
 
         leaf = node[anchor_idx][folder_parent_idx][folder_name_idx][suffix_idx][stem_idx]
         assert leaf == ("PDF", 1024, 1234567890)
 
     def test_insert_record_increments_counter(self) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         rec = FileRecord("", "", "", "", "", "", 0, 0)
         reset_counters()
-        insert_record(metadata, vocab, "n", rec)
+        insert_record(metadata, vocabulary, "n", rec)
         assert clonescout.storage._total_inserted == 1
-        insert_record(metadata, vocab, "n", rec)
+        insert_record(metadata, vocabulary, "n", rec)
         assert clonescout.storage._total_inserted == 2
 
     def test_conflict_keeps_larger_mtime(self, caplog) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.DEBUG)
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         rec1 = FileRecord("", "a", "b", "c", ".d", "D", 10, 100)
         rec2 = FileRecord("", "a", "b", "c", ".d", "D", 20, 200)
         reset_counters()
-        insert_record(metadata, vocab, "n", rec1)
-        insert_record(metadata, vocab, "n", rec2)
+        insert_record(metadata, vocabulary, "n", rec1)
+        insert_record(metadata, vocabulary, "n", rec2)
 
-        anchor_idx = vocab[""]
-        fp_idx = vocab["a"]
-        fn_idx = vocab["b"]
-        sf_idx = vocab[".d"]
-        stem_idx = vocab["c"]
+        anchor_idx = vocabulary[""]
+        fp_idx = vocabulary["a"]
+        fn_idx = vocabulary["b"]
+        sf_idx = vocabulary[".d"]
+        stem_idx = vocabulary["c"]
         leaf = metadata["n"][anchor_idx][fp_idx][fn_idx][sf_idx][stem_idx]
         assert leaf == ("D", 20, 200)
 
@@ -104,49 +104,49 @@ class TestInsertRecord:
 
     def test_conflict_same_mtime_overwrites(self, caplog) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.DEBUG)
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         rec1 = FileRecord("", "a", "b", "c", ".d", "D", 10, 100)
         rec2 = FileRecord("", "a", "b", "c", ".d", "D", 20, 100)
         reset_counters()
-        insert_record(metadata, vocab, "n", rec1)
-        insert_record(metadata, vocab, "n", rec2)
+        insert_record(metadata, vocabulary, "n", rec1)
+        insert_record(metadata, vocabulary, "n", rec2)
 
-        anchor_idx = vocab[""]
-        fp_idx = vocab["a"]
-        fn_idx = vocab["b"]
-        sf_idx = vocab[".d"]
-        stem_idx = vocab["c"]
+        anchor_idx = vocabulary[""]
+        fp_idx = vocabulary["a"]
+        fn_idx = vocabulary["b"]
+        sf_idx = vocabulary[".d"]
+        stem_idx = vocabulary["c"]
         leaf = metadata["n"][anchor_idx][fp_idx][fn_idx][sf_idx][stem_idx]
         assert leaf == ("D", 20, 100)
 
     def test_conflict_keeps_existing_with_larger_mtime(self, caplog) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.DEBUG)
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         rec1 = FileRecord("", "a", "b", "c", ".d", "D", 10, 200)
         rec2 = FileRecord("", "a", "b", "c", ".d", "D", 20, 100)
         reset_counters()
-        insert_record(metadata, vocab, "n", rec1)
-        insert_record(metadata, vocab, "n", rec2)
+        insert_record(metadata, vocabulary, "n", rec1)
+        insert_record(metadata, vocabulary, "n", rec2)
 
-        anchor_idx = vocab[""]
-        fp_idx = vocab["a"]
-        fn_idx = vocab["b"]
-        sf_idx = vocab[".d"]
-        stem_idx = vocab["c"]
+        anchor_idx = vocabulary[""]
+        fp_idx = vocabulary["a"]
+        fn_idx = vocabulary["b"]
+        sf_idx = vocabulary[".d"]
+        stem_idx = vocabulary["c"]
         leaf = metadata["n"][anchor_idx][fp_idx][fn_idx][sf_idx][stem_idx]
         assert leaf == ("D", 10, 200)
 
     def test_progress_logging(self, caplog) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.INFO)
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict = {}
         reset_counters()
         for i in range(SCAN_PROGRESS_INTERVAL + 1):
             # Change stem each time to avoid collisions
             rec2 = FileRecord("", "", "", f"f{i}", "", "", 0, 0)
-            insert_record(metadata, vocab, "n", rec2)
+            insert_record(metadata, vocabulary, "n", rec2)
         info_msgs = [r for r in caplog.records if r.levelno == logging.INFO]
         assert len(info_msgs) == 1
         assert "10000" in info_msgs[0].message
@@ -154,24 +154,24 @@ class TestInsertRecord:
 
 class TestVocabSerialisation:
     def test_as_list_and_from_list_roundtrip(self) -> None:
-        vocab = init_vocab()
-        vocab.add("foo")
-        vocab.add("bar")
-        restored = Vocabulary.from_list(vocab.as_list())
-        assert restored.as_list() == vocab.as_list()
-        assert restored["foo"] == vocab["foo"]
-        assert restored["bar"] == vocab["bar"]
+        vocabulary = init_vocabulary()
+        vocabulary.add("foo")
+        vocabulary.add("bar")
+        restored = Vocabulary.from_list(vocabulary.as_list())
+        assert restored.as_list() == vocabulary.as_list()
+        assert restored["foo"] == vocabulary["foo"]
+        assert restored["bar"] == vocabulary["bar"]
 
     def test_contains(self) -> None:
-        vocab = init_vocab()
-        assert "" in vocab
-        assert "A:" in vocab
-        assert "ZZZ" not in vocab
+        vocabulary = init_vocabulary()
+        assert "" in vocabulary
+        assert "A:" in vocabulary
+        assert "ZZZ" not in vocabulary
 
     def test_getitem_raises_keyerror(self) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         with pytest.raises(KeyError):
-            vocab["nonexistent"]
+            vocabulary["nonexistent"]
 
     def test_merge_result_remap(self) -> None:
         v1 = Vocabulary()
@@ -206,7 +206,7 @@ class TestKeyConversion:
 
 class TestZipRoundtrip:
     def test_write_and_read_roundtrip(self, tmp_path: Path) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict[str, dict] = {}
         run_info = {"clonescout_version": "2026.05", "hostname": "test"}
         rec = FileRecord(
@@ -220,34 +220,34 @@ class TestZipRoundtrip:
             mtime=1234567890,
         )
         reset_counters()
-        insert_record(metadata, vocab, "myhost", rec)
+        insert_record(metadata, vocabulary, "myhost", rec)
 
         zip_path = tmp_path / "test.zip"
-        write_zip(zip_path, vocab, metadata, run_info, force=False)
+        write_zip(zip_path, vocabulary, metadata, run_info, force=False)
         assert zip_path.exists()
 
         v2, m2, r2 = read_zip(zip_path)
-        assert v2.as_list() == vocab.as_list()
+        assert v2.as_list() == vocabulary.as_list()
         assert m2 == metadata
         assert r2 == run_info
 
     def test_write_zip_raises_when_exists_and_not_force(self, tmp_path: Path) -> None:
         zip_path = tmp_path / "test.zip"
         zip_path.write_text("dummy")
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         with pytest.raises(FileExistsError):
-            write_zip(zip_path, vocab, {}, {}, force=False)
+            write_zip(zip_path, vocabulary, {}, {}, force=False)
 
     def test_write_zip_overwrites_when_force(self, tmp_path: Path) -> None:
         zip_path = tmp_path / "test.zip"
         zip_path.write_text("dummy")
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         run_info: dict[str, str] = {}
         metadata: dict[str, dict] = {}
-        write_zip(zip_path, vocab, metadata, run_info, force=True)
+        write_zip(zip_path, vocabulary, metadata, run_info, force=True)
 
         v2, m2, r2 = read_zip(zip_path)
-        assert v2.as_list() == vocab.as_list()
+        assert v2.as_list() == vocabulary.as_list()
         assert m2 == metadata
         assert r2 == run_info
 
@@ -314,7 +314,7 @@ class TestMergeMetadata:
 
 class TestMergeZipRoundtrip:
     def test_write_merge_zip_and_read_zip_roundtrip(self, tmp_path: Path) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         metadata: dict[str, dict] = {}
         rec = FileRecord(
             anchor="",
@@ -327,7 +327,7 @@ class TestMergeZipRoundtrip:
             mtime=1234567890,
         )
         reset_counters()
-        insert_record(metadata, vocab, "myhost", rec)
+        insert_record(metadata, vocabulary, "myhost", rec)
 
         merge_doc = {
             "merge_info": {
@@ -339,11 +339,11 @@ class TestMergeZipRoundtrip:
         }
 
         zip_path = tmp_path / "merged.zip"
-        write_merge_zip(zip_path, vocab, metadata, merge_doc, force=False)
+        write_merge_zip(zip_path, vocabulary, metadata, merge_doc, force=False)
         assert zip_path.exists()
 
         v2, m2, info2 = read_zip(zip_path)
-        assert v2.as_list() == vocab.as_list()
+        assert v2.as_list() == vocabulary.as_list()
         assert m2 == metadata
         assert info2 == merge_doc
         assert "runs" in info2
@@ -353,30 +353,30 @@ class TestMergeZipRoundtrip:
     ) -> None:
         zip_path = tmp_path / "test.zip"
         zip_path.write_text("dummy")
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         with pytest.raises(FileExistsError):
-            write_merge_zip(zip_path, vocab, {}, {}, force=False)
+            write_merge_zip(zip_path, vocabulary, {}, {}, force=False)
 
     def test_write_merge_zip_overwrites_when_force(self, tmp_path: Path) -> None:
         zip_path = tmp_path / "test.zip"
         zip_path.write_text("dummy")
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         merge_doc: dict[str, dict] = {}
         metadata: dict[str, dict] = {}
-        write_merge_zip(zip_path, vocab, metadata, merge_doc, force=True)
+        write_merge_zip(zip_path, vocabulary, metadata, merge_doc, force=True)
 
         v2, m2, info2 = read_zip(zip_path)
-        assert v2.as_list() == vocab.as_list()
+        assert v2.as_list() == vocabulary.as_list()
         assert m2 == metadata
         assert info2 == merge_doc
 
 
 class TestReadZipExtended:
     def test_falls_back_to_merge_json(self, tmp_path: Path) -> None:
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         merge_doc = {"merge_info": {}, "runs": [{"hostname": "test"}]}
         zip_path = tmp_path / "test.zip"
-        write_merge_zip(zip_path, vocab, {}, merge_doc, force=False)
+        write_merge_zip(zip_path, vocabulary, {}, merge_doc, force=False)
 
         _, _, info = read_zip(zip_path)
         assert "runs" in info
@@ -387,10 +387,10 @@ class TestReadZipExtended:
     ) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.WARNING)
 
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         zip_path = tmp_path / "test.zip"
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("vocab.json", json.dumps(vocab.as_list()))
+            zf.writestr("vocab.json", json.dumps(vocabulary.as_list()))
             zf.writestr("metadata.json", json.dumps({}))
             zf.writestr("run.json", json.dumps({"from": "run"}))
             zf.writestr("merge.json", json.dumps({"runs": [{"from": "merge"}]}))
@@ -408,10 +408,10 @@ class TestReadZipExtended:
     ) -> None:  # type: ignore[no-untyped-def]
         caplog.set_level(logging.WARNING)
 
-        vocab = init_vocab()
+        vocabulary = init_vocabulary()
         zip_path = tmp_path / "test.zip"
         with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("vocab.json", json.dumps(vocab.as_list()))
+            zf.writestr("vocab.json", json.dumps(vocabulary.as_list()))
             zf.writestr("metadata.json", json.dumps({}))
 
         _, _, info = read_zip(zip_path)

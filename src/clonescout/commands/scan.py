@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from clonescout.archive import TarScanner, ZipScanner
 from clonescout.constants import CLONESCOUT_VERSION, EXIT_BAD_ARGS, EXIT_RUNTIME_ERROR
 from clonescout.scanner import BaseScanner, FSScanner, classify_path
-from clonescout.storage import init_vocab, insert_record, reset_counters, write_zip
+from clonescout.storage import init_vocabulary, insert_record, reset_counters, write_zip
 
 if TYPE_CHECKING:
     from clonescout.config import ScanConfig
@@ -35,7 +35,7 @@ def run_scan(config: ScanConfig) -> None:
             print(f"error: root {root}: {kind}", file=sys.stderr)
         raise SystemExit(EXIT_BAD_ARGS)
 
-    vocab = init_vocab()
+    vocabulary = init_vocabulary()
     reset_counters()
     metadata: dict[Any, Any] = {}
 
@@ -63,7 +63,7 @@ def run_scan(config: ScanConfig) -> None:
             logging.debug("Excluded: %s", candidate)
             continue
 
-        insert_record(metadata, vocab, config.node, record)
+        insert_record(metadata, vocabulary, config.node, record)
         files_scanned += 1
 
     now = datetime.now(tz=UTC).astimezone()
@@ -79,7 +79,7 @@ def run_scan(config: ScanConfig) -> None:
     try:
         write_zip(
             Path(config.output),
-            vocab,
+            vocabulary,
             metadata,
             run_info,
             force=config.force,

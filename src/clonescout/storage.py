@@ -45,7 +45,7 @@ class Vocabulary:
         """Exports the vocabulary as an ordered list of strings.
 
         The index of each string in the returned list corresponds to its
-        integer index in the vocabulary, so ``enumerate(vocab.as_list())``
+        integer index in the vocabulary, so ``enumerate(vocabulary.as_list())``
         yields ``(index, string)`` pairs.
 
         Returns:
@@ -66,10 +66,10 @@ class Vocabulary:
         Returns:
             A Vocabulary instance with strings registered at their original indices.
         """
-        vocab = cls()
+        vocabulary = cls()
         for string in strings:
-            vocab.add(string)
-        return vocab
+            vocabulary.add(string)
+        return vocabulary
 
     def __len__(self) -> int:
         """Returns the number of entries in the vocabulary.
@@ -105,7 +105,7 @@ class Vocabulary:
         return self._str_to_idx[item]
 
     @staticmethod
-    def merge(*vocabs: Vocabulary) -> MergeResult:
+    def merge(*vocabularies: Vocabulary) -> MergeResult:
         """Merges multiple vocabularies into one without duplicating strings.
 
         Strings are added to the merged vocabulary in the order they are
@@ -113,7 +113,7 @@ class Vocabulary:
         left-to-right, each in its insertion order.
 
         Args:
-            *vocabs: Two or more Vocabulary instances to merge.
+            *vocabularies: Two or more Vocabulary instances to merge.
 
         Returns:
             A MergeResult containing the merged vocabulary and a
@@ -122,9 +122,9 @@ class Vocabulary:
         merged: Vocabulary = Vocabulary()
         index_maps: list[list[int]] = []
 
-        for vocab in vocabs:
+        for vocabulary in vocabularies:
             old_to_new: list[int] = []
-            for old_idx, string in enumerate(vocab._strings):
+            for old_idx, string in enumerate(vocabulary._strings):
                 new_idx: int = merged.add(string)
                 old_to_new.append(new_idx)
             index_maps.append(old_to_new)
@@ -177,7 +177,7 @@ def reset_counters() -> None:
 # --- Public API ---
 
 
-def init_vocab() -> Vocabulary:
+def init_vocabulary() -> Vocabulary:
     """Create a Vocabulary pre-populated with POSIX and Windows anchors.
 
     Inserts the empty string (POSIX anchor) at index 0, followed by
@@ -186,16 +186,16 @@ def init_vocab() -> Vocabulary:
     Returns:
         A Vocabulary instance with system anchors pre-registered.
     """
-    vocab = Vocabulary()
-    vocab.add("")
+    vocabulary = Vocabulary()
+    vocabulary.add("")
     for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-        vocab.add(f"{letter}:")
-    return vocab
+        vocabulary.add(f"{letter}:")
+    return vocabulary
 
 
 def insert_record(
     metadata: dict[Any, Any],
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     node: str,
     record: FileRecord,
 ) -> None:
@@ -218,17 +218,17 @@ def insert_record(
 
     Args:
         metadata: The mutable nested metadata dict to populate.
-        vocab: The Vocabulary used to encode string dimensions.
+        vocabulary: The Vocabulary used to encode string dimensions.
         node: The node name for this scan run.
         record: The FileRecord to insert.
     """
     global _total_inserted
 
-    anchor_idx = vocab.add(record.anchor)
-    folder_parent_idx = vocab.add(record.folder_parent)
-    folder_name_idx = vocab.add(record.folder_name)
-    suffix_idx = vocab.add(record.suffix)
-    stem_idx = vocab.add(record.stem)
+    anchor_idx = vocabulary.add(record.anchor)
+    folder_parent_idx = vocabulary.add(record.folder_parent)
+    folder_name_idx = vocabulary.add(record.folder_name)
+    suffix_idx = vocabulary.add(record.suffix)
+    stem_idx = vocabulary.add(record.stem)
 
     payload: tuple[str, int, int] = (record.ext, record.size, record.mtime)
 
@@ -288,7 +288,7 @@ def _keys_to_int(d: dict[str, Any]) -> dict[Any, Any]:
 
 def write_zip(
     path: Path,
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     metadata: dict[str, Any],
     run_info: dict[str, Any],
     force: bool,
@@ -305,7 +305,7 @@ def write_zip(
 
     Args:
         path: Destination path for the output ZIP file.
-        vocab: The Vocabulary to serialise.
+        vocabulary: The Vocabulary to serialise.
         metadata: The nested metadata dict.
         run_info: Arbitrary run-information dict (caller provides contents).
         force: If ``True``, overwrite *path* when it already exists.
@@ -320,7 +320,7 @@ def write_zip(
 
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(
-            "vocab.json", json.dumps(vocab.as_list(), ensure_ascii=False, indent=indent)
+            "vocab.json", json.dumps(vocabulary.as_list(), ensure_ascii=False, indent=indent)
         )
         zf.writestr(
             "metadata.json",
@@ -419,7 +419,7 @@ def merge_metadata(
 
 def write_merge_zip(
     path: Path,
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     metadata: dict[str, Any],
     merge_doc: dict[str, Any],
     force: bool,
@@ -437,7 +437,7 @@ def write_merge_zip(
 
     Args:
         path: Destination path for the output ZIP file.
-        vocab: The merged Vocabulary to serialise.
+        vocabulary: The merged Vocabulary to serialise.
         metadata: The merged nested metadata dict.
         merge_doc: The merge document (merge_info + runs list).
         force: If ``True``, overwrite *path* when it already exists.
@@ -452,7 +452,7 @@ def write_merge_zip(
 
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(
-            "vocab.json", json.dumps(vocab.as_list(), ensure_ascii=False, indent=indent)
+            "vocab.json", json.dumps(vocabulary.as_list(), ensure_ascii=False, indent=indent)
         )
         zf.writestr(
             "metadata.json",
@@ -481,13 +481,13 @@ def read_zip(path: Path) -> tuple[Vocabulary, dict[Any, Any], dict[str, Any]]:
         path: Path to the ZIP file to read.
 
     Returns:
-        A tuple ``(vocab, metadata, info)`` where *vocab* is the restored
+        A tuple ``(vocabulary, metadata, info)`` where *vocabulary* is the restored
         Vocabulary, *metadata* is the nested metadata dict with integer keys
         restored, and *info* is the run-information dict, the merge document,
         or ``{}``.
     """
     with zipfile.ZipFile(path, "r") as zf:
-        vocab_list: list[str] = json.loads(zf.read("vocab.json").decode())
+        vocab: list[str] = json.loads(zf.read("vocab.json").decode())
         metadata_raw: dict[str, Any] = json.loads(
             zf.read("metadata.json").decode()
         )
@@ -509,6 +509,6 @@ def read_zip(path: Path) -> tuple[Vocabulary, dict[Any, Any], dict[str, Any]]:
             )
             info = {}
 
-    vocab = Vocabulary.from_list(vocab_list)
+    vocabulary = Vocabulary.from_list(vocab)
     metadata = _keys_to_int(metadata_raw)
-    return vocab, metadata, info
+    return vocabulary, metadata, info

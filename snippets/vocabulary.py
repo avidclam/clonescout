@@ -30,7 +30,7 @@ class Vocabulary:
         """Exports the vocabulary as an ordered list of strings.
 
         The index of each string in the returned list corresponds to its
-        integer index in the vocabulary, so ``enumerate(vocab.as_list())``
+        integer index in the vocabulary, so ``enumerate(vocabulary.as_list())``
         yields ``(index, string)`` pairs.
 
         Returns:
@@ -51,10 +51,10 @@ class Vocabulary:
         Returns:
             A Vocabulary instance with strings registered at their original indices.
         """
-        vocab = cls()
+        vocabulary = cls()
         for string in strings:
-            vocab.add(string)
-        return vocab
+            vocabulary.add(string)
+        return vocabulary
 
     def __len__(self) -> int:
         """Returns the number of entries in the vocabulary.
@@ -90,7 +90,7 @@ class Vocabulary:
         return self._str_to_idx[item]
 
     @staticmethod
-    def merge(*vocabs: "Vocabulary") -> "MergeResult":
+    def merge(*vocabularies: "Vocabulary") -> "MergeResult":
         """Merges multiple vocabularies into one without duplicating strings.
 
         Strings are added to the merged vocabulary in the order they are
@@ -98,7 +98,7 @@ class Vocabulary:
         left-to-right, each in its insertion order.
 
         Args:
-            *vocabs: Two or more Vocabulary instances to merge.
+            *vocabularies: Two or more Vocabulary instances to merge.
 
         Returns:
             A MergeResult containing the merged vocabulary and a
@@ -107,9 +107,9 @@ class Vocabulary:
         merged: Vocabulary = Vocabulary()
         index_maps: list[list[int]] = []
 
-        for vocab in vocabs:
+        for vocabulary in vocabularies:
             old_to_new: list[int] = []
-            for old_idx, string in enumerate(vocab._strings):
+            for old_idx, string in enumerate(vocabulary._strings):
                 new_idx: int = merged.add(string)
                 old_to_new.append(new_idx)
             index_maps.append(old_to_new)

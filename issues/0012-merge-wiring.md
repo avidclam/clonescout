@@ -44,7 +44,7 @@ def merge_metadata(
    - Log `DEBUG` for every collision (identical to `insert_record`).
 4. Return the merged dict.
 
-#### `write_merge_zip(path, vocab, metadata, merge_doc, force, indent)` (new public function)
+#### `write_merge_zip(path, vocabulary, metadata, merge_doc, force, indent)` (new public function)
 
 Analogue of `write_zip` that writes `merge.json` instead of `run.json`. Same
 signature except `merge_doc` replaces `run_info`. Same error handling
@@ -54,7 +54,7 @@ signature except `merge_doc` replaces `run_info`. Same error handling
 
 #### `read_zip` (extended)
 
-Signature unchanged: `(vocab, metadata, info)`. The third element is now whatever
+Signature unchanged: `(vocabulary, metadata, info)`. The third element is now whatever
 was found in the ZIP:
 
 | Member found | Returns |
@@ -73,8 +73,8 @@ Callers distinguish merge-ZIP from scan-ZIP by checking for the `"runs"` key.
 #### Step-by-step
 
 1. **Read all inputs.** For each path in `config.input`:
-   - `vocab, metadata, info = read_zip(Path(path))`
-   - Collect vocab, metadata, and extract run records:
+   - `vocabulary, metadata, info = read_zip(Path(path))`
+   - Collect vocabulary, metadata, and extract run records:
      - If `info` has key `"runs"` → flatten that list into `run_records`.
      - Else if `info` is non-empty (single scan-ZIP) → append `info` wrapped in a list.
      - Else (`{}`) → contribute nothing.
@@ -105,7 +105,7 @@ Callers distinguish merge-ZIP from scan-ZIP by checking for the `"runs"` key.
    try:
        write_merge_zip(
            Path(config.output),
-           merged_vocab, merged_metadata, merge_doc,
+           merged_vocabulary, merged_metadata, merge_doc,
            force=config.force,
        )
    except FileExistsError:
@@ -143,7 +143,7 @@ Callers distinguish merge-ZIP from scan-ZIP by checking for the `"runs"` key.
   verify later source wins.
 - **`test_merge_metadata_collsion_logging`** — Verify `DEBUG` messages for collision.
 - **`test_write_merge_zip_and_read_zip_roundtrip`** — Write a merge ZIP with
-  `write_merge_zip`, read it back with `read_zip`, assert vocab/metadata/merge_doc
+  `write_merge_zip`, read it back with `read_zip`, assert vocabulary/metadata/merge_doc
   survive the roundtrip.
 - **`test_read_zip_falls_back_to_merge_json`** — Write a ZIP with `merge.json`
   but no `run.json`, read with `read_zip`, assert third element has `"runs"` key.
@@ -156,7 +156,7 @@ Callers distinguish merge-ZIP from scan-ZIP by checking for the `"runs"` key.
 
 - **Happy path — two scan ZIPs:** Create two scan ZIPs via `write_zip`, merge them
   with `run_merge`, read the result back, assert:
-  - Merged vocab contains all strings from both inputs.
+  - Merged vocabularies contains all strings from both inputs.
   - All records from both inputs are present in merged metadata.
   - `merge_doc["runs"]` has exactly 2 entries.
   - `merge_doc["merge_info"]["inputs"]` contains resolved paths of both inputs.

@@ -17,8 +17,8 @@ Core flow:
 
 ```
 config.input (path to a metadata ZIP)
-  → read_zip(path)             → (vocab, metadata, info)
-  → build_folders(vocab, metadata) → folders
+  → read_zip(path)             → (vocabulary, metadata, info)
+  → build_folders(vocabulary.as_list(), metadata) → folders
   → signature_fabric(LSH_NUM_BANDS, LSH_BAND_SIZE, LSH_SEED) → get_signature
   → find_duplicates(folders, TIER_COMPONENTS, TIER_ORDER, TIER_THRESHOLDS, get_signature)
                                 → list[MatchCandidate]
@@ -198,7 +198,7 @@ Both folders' `total_size` and the `shared_size` use this helper.
 1. **Read the input ZIP.**
    ```python
    try:
-       vocab, metadata, info = read_zip(Path(config.input))
+       vocabulary, metadata, info = read_zip(Path(config.input))
    except FileNotFoundError:
        print(f"error: input file not found: {config.input}", file=sys.stderr)
        raise SystemExit(EXIT_RUNTIME_ERROR)
@@ -213,7 +213,7 @@ Both folders' `total_size` and the `shared_size` use this helper.
 
 2. **Materialise folders.**
    ```python
-   folders = build_folders(vocab, metadata)
+   folders = build_folders(vocabulary.as_list(), metadata)
    ```
 
 3. **Construct the signature closure.**

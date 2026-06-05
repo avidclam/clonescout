@@ -39,27 +39,27 @@ Node is **not** stored in `FileRecord`; it is applied at the metadata-insertion 
 
 ### `src/clonescout/storage.py`
 
-#### Vocabulary initialisation — `init_vocab() -> Vocabulary`
+#### Vocabulary initialisation — `init_vocabulary() -> Vocabulary`
 
 Creates a `Vocabulary` pre-populated with the POSIX anchor and all Windows drive letters:
 
 ```python
-vocab = Vocabulary()
-vocab.add("")           # index 0 — POSIX anchor
+vocabulary = Vocabulary()
+vocabulary.add("")           # index 0 — POSIX anchor
 for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-    vocab.add(f"{letter}:")
+    vocabulary.add(f"{letter}:")
 ```
 
 Returns the `Vocabulary` instance.
 
-#### Metadata insertion — `insert_record(metadata, vocab, node, record) -> None`
+#### Metadata insertion — `insert_record(metadata, vocabulary, node, record) -> None`
 
 Signature:
 
 ```python
 def insert_record(
     metadata: dict,
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     node: str,
     record: FileRecord,
 ) -> None:
@@ -90,12 +90,12 @@ logging.info("Scanned %d files so far...", total_inserted)
 The function must track `total_inserted` across calls. Make `total_inserted` 
 a module-level counter reset by a dedicated `reset_counters()` function.
 
-#### ZIP serialisation — `write_zip(path, vocab, metadata, run_info, force) -> None`
+#### ZIP serialisation — `write_zip(path, vocabulary, metadata, run_info, force) -> None`
 
 ```python
 def write_zip(
     path: Path,
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     metadata: dict,
     run_info: dict,
     force: bool,
@@ -124,7 +124,7 @@ If `path` already exists and `force` is `False`, raise `FileExistsError`.
 def read_zip(path: Path) -> tuple[Vocabulary, dict, dict]:
 ```
 
-Reads a ZIP written by `write_zip`. Returns `(vocab, metadata, run_info)`.
+Reads a ZIP written by `write_zip`. Returns `(vocabulary, metadata, run_info)`.
 Restores integer dict keys from their string serialisation.
 
 ---
@@ -147,13 +147,13 @@ SCAN_PROGRESS_INTERVAL: int = 10_000  # emit progress log every N files inserted
 immutability (frozen), field access.
 
 `tests/units/test_storage.py`:
-- `init_vocab()` seeds correct entries at correct indices (index 0 is `""`, index 1
+- `init_vocabulary()` seeds correct entries at correct indices (index 0 is `""`, index 1
   is `"A:"`, ..., index 26 is `"Z:"`).
 - `insert_record()` builds the correct nested structure for a single record.
 - Conflict resolution: same leaf, lower `mtime` → existing record wins; same
   `mtime` → overwrite occurs.
 - `write_zip()` + `read_zip()` round-trip: write several records, read back,
-  assert vocab and metadata are identical.
+  assert vocabulary and metadata are identical.
 - `write_zip()` raises `FileExistsError` when output exists and `force=False`.
 - `write_zip()` overwrites successfully when `force=True`.
 

@@ -32,7 +32,7 @@ class TestRunScanDirectory:
         run_scan(config)
 
         assert output.exists()
-        vocab, metadata, run_info = read_zip(output)
+        vocabulary, metadata, run_info = read_zip(output)
         assert run_info["files_scanned"] == 3
         assert run_info["files_excluded"] == 0
         assert run_info["clonescout_version"] == "2026.05"
@@ -40,10 +40,10 @@ class TestRunScanDirectory:
         assert "timestamp" in run_info
 
         folder_parent = root.parent.relative_to("/").as_posix()
-        fp_idx = vocab[folder_parent]
-        fn_idx = vocab["scanme"]
-        sf_idx = vocab[".txt"]
-        stem_idx = vocab["a"]
+        fp_idx = vocabulary[folder_parent]
+        fn_idx = vocabulary["scanme"]
+        sf_idx = vocabulary[".txt"]
+        stem_idx = vocabulary["a"]
         leaf = metadata["test-node"][0][fp_idx][fn_idx][sf_idx][stem_idx]
         assert leaf == ("TXT", len("hello"), leaf[2])
         assert isinstance(leaf[2], int)
@@ -57,11 +57,11 @@ class TestRunScanDirectory:
         config = ScanConfig(node="test-node", root=[str(root)], output=str(output))
         run_scan(config)
 
-        vocab, metadata, _ = read_zip(output)
+        vocabulary, metadata, _ = read_zip(output)
         folder_parent = root.parent.relative_to("/").as_posix()
-        leaf = metadata["test-node"][0][vocab[folder_parent]][vocab["scanme"]][
-            vocab[".txt"]
-        ][vocab["top"]]
+        leaf = metadata["test-node"][0][vocabulary[folder_parent]][vocabulary["scanme"]][
+            vocabulary[".txt"]
+        ][vocabulary["top"]]
         assert leaf[1] == 10
 
 
@@ -78,15 +78,15 @@ class TestRunScanArchive:
         )
         run_scan(config)
 
-        vocab, metadata, run_info = read_zip(output)
+        vocabulary, metadata, run_info = read_zip(output)
         assert run_info["files_scanned"] == 2
         assert run_info["files_excluded"] == 0
 
-        anchor_idx = vocab[archive.resolve().as_posix()]
-        fn_idx = vocab["docs"]
-        sf_idx = vocab[".pdf"]
-        stem_idx = vocab["report"]
-        leaf = metadata["test-node"][anchor_idx][vocab[""]][fn_idx][sf_idx][stem_idx]
+        anchor_idx = vocabulary[archive.resolve().as_posix()]
+        fn_idx = vocabulary["docs"]
+        sf_idx = vocabulary[".pdf"]
+        stem_idx = vocabulary["report"]
+        leaf = metadata["test-node"][anchor_idx][vocabulary[""]][fn_idx][sf_idx][stem_idx]
         assert leaf[0] == "PDF"
 
     def test_tar_gz_archive(self, tmp_path: Path) -> None:
@@ -101,14 +101,14 @@ class TestRunScanArchive:
         )
         run_scan(config)
 
-        vocab, metadata, run_info = read_zip(output)
+        vocabulary, metadata, run_info = read_zip(output)
         assert run_info["files_scanned"] == 2
 
-        anchor_idx = vocab[archive.resolve().as_posix()]
-        fn_idx = vocab["docs"]
-        sf_idx = vocab[".pdf"]
-        stem_idx = vocab["report"]
-        leaf = metadata["test-node"][anchor_idx][vocab[""]][fn_idx][sf_idx][stem_idx]
+        anchor_idx = vocabulary[archive.resolve().as_posix()]
+        fn_idx = vocabulary["docs"]
+        sf_idx = vocabulary[".pdf"]
+        stem_idx = vocabulary["report"]
+        leaf = metadata["test-node"][anchor_idx][vocabulary[""]][fn_idx][sf_idx][stem_idx]
         assert leaf[0] == "PDF"
 
     def test_zip_and_tar_produce_equivalent_metadata(self, tmp_path: Path) -> None:
@@ -134,33 +134,33 @@ class TestRunScanArchive:
         )
         run_scan(tar_cfg)
 
-        zip_vocab, zip_meta, _ = read_zip(zip_out)
-        tar_vocab, tar_meta, _ = read_zip(tar_out)
+        zip_vocabulary, zip_meta, _ = read_zip(zip_out)
+        tar_vocabulary, tar_meta, _ = read_zip(tar_out)
 
         for name in ("docs", "report", ".pdf", "README", ".md"):
-            assert name in zip_vocab
-            assert name in tar_vocab
+            assert name in zip_vocabulary
+            assert name in tar_vocabulary
 
-        zip_anchor = zip_vocab[zip_archive.resolve().as_posix()]
-        tar_anchor = tar_vocab[tar_archive.resolve().as_posix()]
+        zip_anchor = zip_vocabulary[zip_archive.resolve().as_posix()]
+        tar_anchor = tar_vocabulary[tar_archive.resolve().as_posix()]
 
-        zip_leaf = zip_meta["test-node"][zip_anchor][zip_vocab[""]][
-            zip_vocab["docs"]
-        ][zip_vocab[".pdf"]][zip_vocab["report"]]
-        tar_leaf = tar_meta["test-node"][tar_anchor][tar_vocab[""]][
-            tar_vocab["docs"]
-        ][tar_vocab[".pdf"]][tar_vocab["report"]]
+        zip_leaf = zip_meta["test-node"][zip_anchor][zip_vocabulary[""]][
+            zip_vocabulary["docs"]
+        ][zip_vocabulary[".pdf"]][zip_vocabulary["report"]]
+        tar_leaf = tar_meta["test-node"][tar_anchor][tar_vocabulary[""]][
+            tar_vocabulary["docs"]
+        ][tar_vocabulary[".pdf"]][tar_vocabulary["report"]]
         assert zip_leaf[0] == tar_leaf[0] == "PDF"
         assert zip_leaf[1] == tar_leaf[1] == len(b"pdf content")
         assert isinstance(zip_leaf[2], int)
         assert isinstance(tar_leaf[2], int)
 
-        zip_leaf2 = zip_meta["test-node"][zip_anchor][zip_vocab[""]][
-            zip_vocab[""]
-        ][zip_vocab[".md"]][zip_vocab["README"]]
-        tar_leaf2 = tar_meta["test-node"][tar_anchor][tar_vocab[""]][
-            tar_vocab[""]
-        ][tar_vocab[".md"]][tar_vocab["README"]]
+        zip_leaf2 = zip_meta["test-node"][zip_anchor][zip_vocabulary[""]][
+            zip_vocabulary[""]
+        ][zip_vocabulary[".md"]][zip_vocabulary["README"]]
+        tar_leaf2 = tar_meta["test-node"][tar_anchor][tar_vocabulary[""]][
+            tar_vocabulary[""]
+        ][tar_vocabulary[".md"]][tar_vocabulary["README"]]
         assert zip_leaf2[0] == tar_leaf2[0] == "MD"
         assert zip_leaf2[1] == tar_leaf2[1] == len(b"readme content")
         assert isinstance(zip_leaf2[2], int)
@@ -185,19 +185,19 @@ class TestMixedRoots:
         )
         run_scan(config)
 
-        vocab, metadata, run_info = read_zip(output)
+        vocabulary, metadata, run_info = read_zip(output)
         assert run_info["files_scanned"] == 2
 
         folder_parent = root.parent.relative_to("/").as_posix()
-        leaf1 = metadata["test-node"][0][vocab[folder_parent]][vocab["scanme"]][
-            vocab[".txt"]
-        ][vocab["a"]]
+        leaf1 = metadata["test-node"][0][vocabulary[folder_parent]][vocabulary["scanme"]][
+            vocabulary[".txt"]
+        ][vocabulary["a"]]
         assert leaf1[0] == "TXT"
 
-        anchor_idx = vocab[archive.resolve().as_posix()]
-        leaf2 = metadata["test-node"][anchor_idx][vocab[""]][vocab["data"]][
-            vocab[".log"]
-        ][vocab["b"]]
+        anchor_idx = vocabulary[archive.resolve().as_posix()]
+        leaf2 = metadata["test-node"][anchor_idx][vocabulary[""]][vocabulary["data"]][
+            vocabulary[".log"]
+        ][vocabulary["b"]]
         assert leaf2[0] == "LOG"
 
 
@@ -247,8 +247,8 @@ class TestExclude:
         assert run_info["files_scanned"] == 2
         assert run_info["files_excluded"] == 1
 
-        vocab, _, _ = read_zip(output)
-        assert "b" not in vocab
+        vocabulary, _, _ = read_zip(output)
+        assert "b" not in vocabulary
 
     def test_exclude_matches_path_with_folder_components(self, tmp_path: Path) -> None:
         root = tmp_path / "scanme"

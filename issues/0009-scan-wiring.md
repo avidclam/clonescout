@@ -38,7 +38,7 @@ errors at once, not just the first.
 #### 2. Initialise storage
 
 ```python
-vocab = init_vocab()
+vocabulary = init_vocabulary()
 reset_counters()
 metadata: dict = {}
 ```
@@ -74,7 +74,7 @@ If any pattern in `config.exclude` matches (`pattern.search(candidate)`):
 - `logging.debug("Excluded: %s", candidate)`
 - continue
 
-Otherwise call `insert_record(metadata, vocab, config.node, record)` and increment
+Otherwise call `insert_record(metadata, vocabulary, config.node, record)` and increment
 `files_scanned`.
 
 #### 5. Build `run_info` and write ZIP
@@ -94,7 +94,7 @@ run_info = {
 }
 
 try:
-    write_zip(Path(config.output), vocab, metadata, run_info, force=config.force)
+    write_zip(Path(config.output), vocabulary, metadata, run_info, force=config.force)
 except FileExistsError:
     print(
         f"error: output file already exists: {config.output} (use --force to overwrite)",

@@ -14,8 +14,8 @@ Core flow:
 
 ```
 config.input (list of ZIP paths)
-  → read each ZIP → (vocab_i, metadata_i, run_info_i)
-  → Vocabulary.merge(*vocabs) → merged_vocab + index_maps
+  → read each ZIP → (vocabulary_i, metadata_i, run_info_i)
+  → Vocabulary.merge(*vocabularies) → merged_vocabulary + index_maps
   → recode each metadata_i using index_maps[i]
   → merge recoded metadata dicts (conflict resolution: larger mtime wins)
   → collect run history entries
@@ -152,15 +152,15 @@ def run_merge(config: MergeConfig) -> None:
 ### Step-by-step
 
 1. **Read all inputs.** For each path in `config.input`:
-   - Call `read_zip(path)` → `(vocab_i, metadata_i, run_info_or_merge_i)`.
-   - Collect into parallel lists: `vocabs`, `metadatas`, `run_records` (list of lists,
+   - Call `read_zip(path)` → `(vocabulary_i, metadata_i, run_info_or_merge_i)`.
+   - Collect into parallel lists: `vocabularies`, `metadatas`, `run_records` (list of lists,
      one inner list per input, flattened as described above).
    - On `FileNotFoundError` or `zipfile.BadZipFile`: print error to stderr, exit with
      `EXIT_RUNTIME_ERROR`.
 
 2. **Merge vocabularies.**
    ```python
-   result = Vocabulary.merge(*vocabs)  # → MergeResult
+   result = Vocabulary.merge(*vocabularies)  # → MergeResult
    ```
 
 3. **Recode and merge metadata.**
@@ -182,7 +182,7 @@ def run_merge(config: MergeConfig) -> None:
    ```
 
 5. **Write output ZIP.**  
-   Call `write_merge_zip(Path(config.output), merged_vocab, merged_metadata, merge_doc, force=config.force, indent=...)`.
+   Call `write_merge_zip(Path(config.output), merged_vocabulary, merged_metadata, merge_doc, force=config.force, indent=...)`.
 
 ### Error Handling
 
@@ -204,7 +204,7 @@ A new parallel function handles merge output:
 ```python
 def write_merge_zip(
     path: Path,
-    vocab: Vocabulary,
+    vocabulary: Vocabulary,
     metadata: dict[str, Any],
     merge_doc: dict[str, Any],
     force: bool,
@@ -216,7 +216,7 @@ def write_merge_zip(
 
     Args:
         path: Destination path for the output ZIP file.
-        vocab: The merged Vocabulary to serialise.
+        vocabulary: The merged Vocabulary to serialise.
         metadata: The merged nested metadata dict.
         merge_doc: The merge document (merge_info + runs list).
         force: If True, overwrite path when it already exists.
@@ -255,6 +255,6 @@ Callers distinguish the two cases by checking for the `"runs"` key.
 | Module | Responsibility |
 |---|---|
 | `storage.py` | `merge_metadata()`, `_recode()`, new `write_merge_zip()`, extended `read_zip()` |
-| `commands/merge.py` | Orchestration: read → merge vocab → recode → merge metadata → write |
+| `commands/merge.py` | Orchestration: read → merge vocabularies → recode → merge metadata → write |
 | `config.py` | `MergeConfig` — already complete |
 | `cli.py` | `cmd_merge()` dispatch — already complete |

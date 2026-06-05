@@ -125,10 +125,10 @@ Corrupt or unreadable members: `logging.warning()`, continue.
 Before scanning begins, a `Vocabulary` instance is created and pre-populated:
 
 ```python
-vocab = Vocabulary()
-vocab.add("")          # POSIX anchor (index 0)
+vocabulary = Vocabulary()
+vocabulary.add("")          # POSIX anchor (index 0)
 for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-    vocab.add(f"{letter}:")   # Windows drive anchors
+    vocabulary.add(f"{letter}:")   # Windows drive anchors
 ```
 
 ### Nested dict layout
@@ -181,7 +181,7 @@ The output file is a ZIP archive containing three JSON members:
 ["", "A:", "B:", ..., "photos", "IMG_001", ...]
 ```
 
-The vocabulary as a plain list (output of `vocab.as_list()`). Index position = vocabulary index.
+The vocabulary as a plain list (output of `vocabulary.as_list()`). Index position = vocabulary index.
 
 ### `metadata.json`
 

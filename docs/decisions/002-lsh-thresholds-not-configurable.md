@@ -1,4 +1,4 @@
-# 002 — LSH parameters and tier thresholds are not user-configurable
+# ADR 002 — LSH parameters and tier thresholds are not user-configurable
 
 ## Status
 Accepted

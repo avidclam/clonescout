@@ -53,7 +53,9 @@ closure via `signature_fabric()` and passing it in, along with
 
 ```
 read_zip(path)
-    │  returns (vocab: list[str], metadata: dict, info: dict)
+    │  returns (vocabulary: Vocabulary, metadata: dict, info: dict)
+    │
+    │  vocabulary.as_list() → list[str]
     ▼
 build_folders(vocab, metadata)
     │  Decodes nested index dict → dict[folder_id, FolderRecord]

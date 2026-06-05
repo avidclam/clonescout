@@ -10,7 +10,7 @@ import pytest
 from clonescout.cli import main
 from clonescout.constants import EXIT_BAD_ARGS
 from clonescout.models import FileRecord
-from clonescout.storage import init_vocab, insert_record, reset_counters, write_zip
+from clonescout.storage import init_vocabulary, insert_record, reset_counters, write_zip
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -121,14 +121,14 @@ class TestIntegration:
         output = tmp_path / "merged.zip"
 
         for path in (zip_a, zip_b):
-            vocab = init_vocab()
+            vocabulary = init_vocabulary()
             metadata: dict = {}
             reset_counters()
             insert_record(
-                metadata, vocab, "test",
+                metadata, vocabulary, "test",
                 FileRecord("", "", "", "f", ".txt", "TXT", 0, 0),
             )
-            write_zip(path, vocab, metadata, {"clonescout_version": "1"}, force=False)
+            write_zip(path, vocabulary, metadata, {"clonescout_version": "1"}, force=False)
 
         main(["merge", "-i", str(zip_a), "-i", str(zip_b), "-o", str(output)])
         assert output.exists()

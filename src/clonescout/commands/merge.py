@@ -25,14 +25,14 @@ def run_merge(config: MergeConfig) -> None:
     Args:
         config: Fully validated merge configuration.
     """
-    vocabs: list[Vocabulary] = []
+    vocabularies: list[Vocabulary] = []
     metadatas: list[dict[Any, Any]] = []
     run_records: list[list[dict[str, Any]]] = []
 
     for input_path in config.input:
         path = Path(input_path)
         try:
-            vocab, metadata, info = read_zip(path)
+            vocabulary, metadata, info = read_zip(path)
         except FileNotFoundError:
             print(f"error: input file not found: {input_path}", file=sys.stderr)
             raise SystemExit(EXIT_RUNTIME_ERROR)
@@ -40,7 +40,7 @@ def run_merge(config: MergeConfig) -> None:
             print(f"error: not a valid ZIP file: {input_path}", file=sys.stderr)
             raise SystemExit(EXIT_RUNTIME_ERROR)
 
-        vocabs.append(vocab)
+        vocabularies.append(vocabulary)
         metadatas.append(metadata)
 
         if "runs" in info:
@@ -50,7 +50,7 @@ def run_merge(config: MergeConfig) -> None:
         else:
             run_records.append([])
 
-    result = Vocabulary.merge(*vocabs)
+    result = Vocabulary.merge(*vocabularies)
 
     sources = [(meta, result.index_maps[i]) for i, meta in enumerate(metadatas)]
     merged_metadata = merge_metadata(sources)

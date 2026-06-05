@@ -11,7 +11,7 @@ from clonescout.config import MergeConfig
 from clonescout.constants import EXIT_RUNTIME_ERROR
 from clonescout.models import FileRecord
 from clonescout.storage import (
-    init_vocab,
+    init_vocabulary,
     insert_record,
     read_zip,
     reset_counters,
@@ -32,7 +32,7 @@ def _make_scan_zip(
     size: int = 1024,
     mtime: int = 1234567890,
 ) -> None:
-    vocab = init_vocab()
+    vocabulary = init_vocabulary()
     metadata: dict = {}
     rec = FileRecord(
         anchor="",
@@ -45,7 +45,7 @@ def _make_scan_zip(
         mtime=mtime,
     )
     reset_counters()
-    insert_record(metadata, vocab, node, rec)
+    insert_record(metadata, vocabulary, node, rec)
 
     run_info = {
         "clonescout_version": "2026.05",
@@ -55,7 +55,7 @@ def _make_scan_zip(
         "files_scanned": 1,
         "files_excluded": 0,
     }
-    write_zip(path, vocab, metadata, run_info, force=False)
+    write_zip(path, vocabulary, metadata, run_info, force=False)
 
 
 class TestMergeTwoScanZips:
@@ -73,17 +73,17 @@ class TestMergeTwoScanZips:
         run_merge(config)
 
         assert output.exists()
-        vocab, metadata, info = read_zip(output)
+        vocabulary, metadata, info = read_zip(output)
 
         assert "runs" in info
         assert len(info["runs"]) == 2
         assert info["runs"][0]["hostname"] == "host-a"
         assert info["runs"][1]["hostname"] == "host-b"
 
-        assert "report" in vocab
-        assert "slide" in vocab
-        assert ".pdf" in vocab
-        assert ".pptx" in vocab
+        assert "report" in vocabulary
+        assert "slide" in vocabulary
+        assert ".pdf" in vocabulary
+        assert ".pptx" in vocabulary
 
         assert "host-a" in metadata
         assert "host-b" in metadata
@@ -120,12 +120,12 @@ class TestMergeTwoScanZips:
         )
         run_merge(config)
 
-        vocab, metadata, _ = read_zip(output)
-        anchor_idx = vocab[""]
-        fp_idx = vocab["home/user"]
-        fn_idx = vocab["docs"]
-        sf_idx = vocab[".pdf"]
-        stem_idx = vocab["report"]
+        vocabulary, metadata, _ = read_zip(output)
+        anchor_idx = vocabulary[""]
+        fp_idx = vocabulary["home/user"]
+        fn_idx = vocabulary["docs"]
+        sf_idx = vocabulary[".pdf"]
+        stem_idx = vocabulary["report"]
 
         leaf = metadata["host-a"][anchor_idx][fp_idx][fn_idx][sf_idx][stem_idx]
         assert leaf[2] == 100  # host-a keeps its mtime (different node)
