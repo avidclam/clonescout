@@ -88,3 +88,24 @@ class FolderRecord:
     @property
     def ext_distribution(self) -> dict[str, int]:
         return dict(Counter(f.ext for f in self.files))
+
+
+@dataclass(frozen=True, slots=True)
+class MatchCandidate:
+    """One matched folder pair produced by the tiered duplicate detection.
+
+    Attributes:
+        tier: Tier label at which the match was found: "T1", "T2", or "T3".
+        folder_id_a: Folder ID of the first folder (lexicographically smaller).
+        folder_id_b: Folder ID of the second folder.
+        jaccard: Exact Jaccard similarity of the two feature sets, in [0, 1].
+        shared_size: Sum of FileRecord.size for feature tuples present in
+            both folders' feature sets.  Represents the amount of data that
+            the two folders have in common.
+    """
+
+    tier: str
+    folder_id_a: str
+    folder_id_b: str
+    jaccard: float
+    shared_size: int
