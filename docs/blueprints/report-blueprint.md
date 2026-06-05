@@ -128,9 +128,9 @@ def run_report(config: ReportConfig) -> None:
 ### Per-tier section (only if the tier has ≥ 1 match)
 
 ```markdown
-## Tier: T1
+## Tier: T3
 
-### 1. Jaccard 1.00 · Shared 10.5 KiB
+### 1. Jaccard 0.83 · Shared 10.5 KiB
 
 | Folder | Total size |
 |---|---:|
@@ -149,10 +149,12 @@ def run_report(config: ReportConfig) -> None:
 
 - Numbered `1.`, `2.`, … within each tier (matches the sort order
   from `find_duplicates`, which is descending `shared_size`).
-- Jaccard: two decimal places, e.g. `0.95`.
+- Jaccard: two decimal places, e.g. `0.83`.
 - Shared size: human-readable via `_fmt_size` (see "Helpers" below).
 - A two-row Markdown table with the two folder paths (in backticks
   for monospace alignment) and each folder's `total_size`.
+- Within each pair, `folder_id_a` is in the first row —
+  `run_tier` guarantees `folder_id_a <= folder_id_b` lexicographically.
 
 #### Tier separator
 
@@ -178,8 +180,8 @@ self-explanatory when piped to a file or `less`.
 
 ### `_fmt_size(n: int) -> str`
 
-Port of the helper from `analysis_snippet.py:585-604` into
-`report.py` (not exported publicly):
+Port of `_fmt_size` from `analysis_snippet.py` into `report.py`
+(not exported publicly):
 
 - `< 1024 B` → `"892 B"`
 - `≥ 1024 B` → one decimal place + binary unit (`KiB`, `MiB`,
@@ -222,7 +224,7 @@ Both folders' `total_size` and the `shared_size` use this helper.
        seed=LSH_SEED,
    )
    ```
-   All three names live in `constants.py` (added per ADR 002).
+   All three names live in `constants.py` (per ADR 002).
 
 4. **Run tiered detection.**
    ```python
@@ -342,12 +344,10 @@ diagnostics, as agreed.
 ## `data/sample_report.md`
 
 This file is printed verbatim by `clonescout sample report`
-(`cli.py:_cmd_sample_report`).  Replace the current
-`"Not implemented."` placeholder with a representative example
-matching the format above.  Use the same fixture as
-`analysis_snippet.py:701-787` (the windows/linux `photos/2021`
-case) plus a synthetic T2 match (same folder names, different
-mtimes) to exercise both tiers in the sample.
+(`cli.py:_cmd_sample_report`).  Replace the current placeholder with
+a representative example matching the format above.  Use the same
+fixture as the `__main__` block in `analysis_snippet.py` (the
+windows/linux `photos/2021` case) as the basis for the sample data.
 
 ---
 
@@ -394,26 +394,28 @@ tests/
 - **No interpretation**: assert the tier heading is exactly
   `"## Tier: T1"` with no trailing blurb or interpretation text.
 
-### `run_report` integration test
+### `run_report` integration tests
 
-- Write a scan ZIP to `tmp_path` via `write_zip` from `storage.py`,
-  then call `run_report` with a `ReportConfig` pointing at it and
-  `output=None` (capture stdout).  Assert the output contains the
-  expected tier heading and at least one expected folder ID.
-- A second test: run with `output=<tmp_path/file.md>`, assert the
-  file is written, contains valid UTF-8, and round-trips through
-  a Markdown parser.
-- A third test: run with `output=<existing file>` and
-  `force=False`, assert `SystemExit(EXIT_RUNTIME_ERROR)`.
-- A fourth test: run with a missing input path, assert
-  `SystemExit(EXIT_RUNTIME_ERROR)` and a stderr message.
-- A fifth test: run with a valid input that produces zero matches,
-  assert `EXIT_SUCCESS` and that the report contains
-  "No duplicates detected.".
+- **Happy path — stdout**: write a scan ZIP to `tmp_path` via
+  `write_zip`, call `run_report` with `output=None` (capture
+  stdout); assert output contains the expected tier heading and at
+  least one expected folder ID.
+- **Happy path — file**: run with `output=<tmp_path/report.md>`;
+  assert the file exists, is valid UTF-8, and contains the expected
+  Markdown headings.
+- **Force false**: run with an existing output file and
+  `force=False`; assert `SystemExit(EXIT_RUNTIME_ERROR)`.
+- **Force true**: same setup with `force=True`; assert success and
+  file is overwritten.
+- **No duplicates**: ZIP with a single folder; assert exit is clean
+  and report contains "No duplicates detected.".
+- **Missing input**: nonexistent path; assert `SystemExit` and
+  error message on stderr.
+- **Bad input**: non-ZIP file as input; assert `SystemExit`.
 
 ### `data/sample_report.md` test
 
 - `clonescout sample report` prints the file contents verbatim.
-  An integration test reads `data/sample_report.md`, invokes the
-  subcommand (via `cli.main(["sample", "report"])`, capturing
-  stdout), and asserts equality.
+  An integration test reads `data/sample_report.md`, invokes
+  `cli.main(["sample", "report"])` capturing stdout, and asserts
+  equality.

@@ -605,7 +605,7 @@ def format_report(
     Output structure::
 
         Tier: T1
-        1. Shared: 10.5 KiB  Jaccard: 1.00
+        1. Shared: 10.5 KiB  Jaccard: 0.83
            linux:/smoke/backup/photos/2021_copy        12.0 KiB
            windows:C:/smoke/Users/alice/photos/2021    15.0 KiB
            
