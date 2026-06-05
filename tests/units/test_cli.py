@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import socket
-import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -25,7 +22,6 @@ from clonescout.config import (
     ReportConfig,
     ScanConfig,
 )
-from clonescout.constants import EXIT_BAD_ARGS, EXIT_SUCCESS
 
 
 class TestBuildParser:
@@ -75,7 +71,7 @@ class TestBuildParser:
         parser = build_parser()
         args = parser.parse_args([])
         # _UNSET sentinel
-        assert args.verbosity is not "WARNING"
+        assert args.verbosity != "WARNING"
 
     def test_verbosity_mutually_exclusive(self) -> None:
         parser = build_parser()

@@ -47,15 +47,15 @@ class FolderRecord:
     @property
     def folder_id(self) -> str:
         """Unique identifier for this folder across all nodes.
- 
+
         Format: ``node:anchor/[folder_parent[/folder_name]|folder_name]``.
         Always starts with ``node:anchor/``.  Then:
- 
+
         - If *folder_parent* is non-empty: appends ``folder_parent``, then
           ``/folder_name`` if *folder_name* is also non-empty.
         - If *folder_parent* is empty: appends ``folder_name`` directly
           (no leading slash).
- 
+
         Examples: ``"nas:/"`` , ``"host:C:/"`` , ``"nas:/photos/2021"`` ,
         ``"host:C:/Users"``.
         """

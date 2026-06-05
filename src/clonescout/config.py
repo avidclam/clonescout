@@ -10,7 +10,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from clonescout.constants import DEFAULT_CONFIG_FILENAME, EXIT_BAD_ARGS, VERBOSITY_LEVELS
+from clonescout.constants import (
+    DEFAULT_CONFIG_FILENAME,
+    EXIT_BAD_ARGS,
+    LSH_BAND_SIZE,
+    LSH_NUM_BANDS,
+    LSH_SEED,
+    TIER_THRESHOLDS,
+    VERBOSITY_LEVELS,
+)
 
 _SectionDict: TypeAlias = dict[str, Any]
 
@@ -226,6 +234,35 @@ class ReportConfig(BaseConfig):
 
     input: str = ""
     output: str | None = None
+    lsh_num_bands: int = LSH_NUM_BANDS
+    lsh_band_size: int = LSH_BAND_SIZE
+    lsh_seed: int = LSH_SEED
+    thresholds: dict[str, float] = field(
+        default_factory=lambda: dict(TIER_THRESHOLDS)
+    )
+
+    def _validate(self) -> None:
+        super()._validate()
+        if type(self.lsh_num_bands) is not int or self.lsh_num_bands < 2:
+            raise ConfigError(
+                f"lsh_num_bands must be an integer >= 2, got {self.lsh_num_bands!r}"
+            )
+        if type(self.lsh_band_size) is not int or self.lsh_band_size < 2:
+            raise ConfigError(
+                f"lsh_band_size must be an integer >= 2, got {self.lsh_band_size!r}"
+            )
+        if type(self.lsh_seed) is not int or self.lsh_seed < 0:
+            raise ConfigError(
+                f"lsh_seed must be a non-negative integer, got {self.lsh_seed!r}"
+            )
+        if not isinstance(self.thresholds, dict):
+            raise ConfigError("thresholds must be a dict")
+        for tier, value in self.thresholds.items():
+            if type(value) not in (int, float) or not (0.0 < value <= 1.0):
+                raise ConfigError(
+                    f"threshold for {tier} must be a float in (0.0, 1.0],"
+                    f" got {value!r}"
+                )
 
     def _validate_completeness(self) -> None:
         if not self.input:

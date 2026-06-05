@@ -141,11 +141,10 @@ class TestReportConfig:
 class TestLoadConfig:
     def _write_toml(self, content: str) -> Path:
         """Write *content* to a temp TOML file and return its path."""
-        tmp = tempfile.NamedTemporaryFile(
+        with tempfile.NamedTemporaryFile(
             mode="w", suffix=".toml", delete=False
-        )
-        tmp.write(content)
-        tmp.close()
+        ) as tmp:
+            tmp.write(content)
         return Path(tmp.name)
 
     def test_missing_explicit_path(self) -> None:
@@ -173,8 +172,6 @@ class TestLoadConfig:
         try:
             load_config(path, "scan")
         except SystemExit as exc:
-            output = str(exc.__context__) if exc.__context__ else ""
-            # The error is printed to stderr; the exception is ConfigError
             assert exc.code == EXIT_BAD_ARGS
 
     def test_scan_config_from_toml(self) -> None:
